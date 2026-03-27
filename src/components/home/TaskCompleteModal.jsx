@@ -1,0 +1,196 @@
+import { useState, useRef } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS } from '@/lib/taskHelpers';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Camera, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+function isWithinTimeWindow(startTime, endTime) {
+  if (!endTime) return true;
+  const now = new Date();
+  const [eh, em] = endTime.split(':').map(Number);
+  const end = new Date(); end.setHours(eh, em, 0);
+  return now <= end;
+}
+
+export default function TaskCompleteModal({ task, person, onClose }) {
+  const queryClient = useQueryClient();
+  const today = new Date().toISOString().split('T')[0];
+  const inTime = isWithinTimeWindow(task?.start_time, task?.end_time);
+  const [selectedType, setSelectedType] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const createMutation = useMutation({
+    mutationFn: async (completionType) => {
+      let photo_url = '';
+      if (photo) {
+        const result = await base44.integrations.Core.UploadFile({ file: photo });
+        photo_url = result.file_url;
+      }
+      return base44.entities.Task.create({
+        person,
+        task_name: task.task_name,
+        completion_type: completionType,
+        value: COMPLETION_TYPES[completionType].value,
+        date: today,
+        week_key: getWeekKey(new Date()),
+        month_key: getCurrentMonthKey(),
+        photo_url,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Tarefa concluída! 🎉');
+      handleClose();
+    },
+  });
+
+  const handleClose = () => {
+    setSelectedType(null);
+    setPhoto(null);
+    setPhotoPreview(null);
+    onClose();
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const options = inTime
+    ? ['on_time_no_reminder', 'on_time_with_reminder']
+    : ['late'];
+
+  return (
+    <AnimatePresence>
+      {task && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={handleClose}
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 pb-24 shadow-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{TASK_ICONS[task.task_name] || '✅'}</span>
+                <div>
+                  <h3 className="font-bold text-lg text-foreground">{task.task_name}</h3>
+                  {task.end_time && (
+                    <p className="text-xs text-muted-foreground">Até às {task.end_time}</p>
+                  )}
+                </div>
+              </div>
+              <button onClick={handleClose} className="p-1 rounded-full hover:bg-muted">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+
+            {!inTime && task.end_time && (
+              <div className="bg-destructive/10 rounded-xl p-3 mb-4 text-sm text-destructive text-center font-medium">
+                ⚠️ Fora do horário — será registado como atrasado
+              </div>
+            )}
+
+            {/* Step 1: choose completion type */}
+            {!selectedType && (
+              <>
+                <p className="text-sm text-muted-foreground mb-3 font-medium">Como fizeste esta tarefa?</p>
+                <div className="space-y-2">
+                  {options.map(key => {
+                    const ct = COMPLETION_TYPES[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSelectedType(key);
+                          setTimeout(() => fileInputRef.current?.click(), 100);
+                        }}
+                        className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-border bg-background hover:border-primary/40 hover:bg-primary/5 transition-all text-left"
+                      >
+                        <span className="text-2xl">{ct.emoji}</span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{ct.label}</p>
+                        </div>
+                        <span className={`text-sm font-bold ${ct.color}`}>+€{ct.value.toFixed(2)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Step 2: take photo */}
+            {selectedType && (
+              <>
+                <p className="text-sm font-semibold text-foreground mb-1">📸 Foto de prova obrigatória</p>
+                <p className="text-xs text-muted-foreground mb-4">Tira uma foto a comprovar que fizeste a tarefa.</p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+
+                {photoPreview ? (
+                  <div className="mb-4">
+                    <img src={photoPreview} alt="preview" className="w-full rounded-2xl object-cover max-h-52" />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 w-full py-2 rounded-xl border border-border text-xs text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Tirar outra foto
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 mb-4"
+                  >
+                    <Camera className="w-8 h-8 text-primary" />
+                    <span className="text-sm font-medium text-primary">Toca para abrir a câmara</span>
+                  </button>
+                )}
+
+                <button
+                  disabled={!photo || createMutation.isPending}
+                  onClick={() => createMutation.mutate(selectedType)}
+                  className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  {createMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> A guardar...</>
+                  ) : (
+                    '✅ Confirmar Tarefa'
+                  )}
+                </button>
+                <button
+                  onClick={() => { setSelectedType(null); setPhoto(null); setPhotoPreview(null); }}
+                  className="w-full py-3 mt-2 rounded-2xl bg-muted text-muted-foreground font-medium text-sm"
+                >
+                  Voltar
+                </button>
+              </>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}

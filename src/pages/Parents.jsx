@@ -1,0 +1,253 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
+import { Lock, Shield, ChevronDown, ChevronUp, Eye, Trash2, TrendingUp, Star } from 'lucide-react';
+import PhotoModal from '@/components/parents/PhotoModal';
+import { PEOPLE, PERSON_AVATARS, PENALTIES, COMPLETION_TYPES, getCurrentWeekKey, getCurrentMonthKey, getWeekTasks, getMonthTasks, calculateEarnings, checkWeeklyBonus, WEEKLY_BONUS, countFailures, getTaskIcon } from '@/lib/taskHelpers';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { motion } from 'framer-motion';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { pt } from 'date-fns/locale';
+import { toast } from 'sonner';
+
+export default function Parents() {
+  const queryClient = useQueryClient();
+  const currentWeek = getCurrentWeekKey();
+  const currentMonth = getCurrentMonthKey();
+  const [expandedPerson, setExpandedPerson] = useState(null);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const { data: user, isLoading: loadingUser } = useCurrentUser();
+
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list('-created_date', 500),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Tarefa removida');
+    },
+  });
+
+  const weekTasks = getWeekTasks(tasks, currentWeek);
+  const monthTasks = getMonthTasks(tasks, currentMonth);
+
+  if (isLoading || loadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isParent(user)) {
+    return (
+      <div className="max-w-lg mx-auto px-4 pt-16 flex flex-col items-center text-center">
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
+          <Lock className="w-9 h-9 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-2">Área Restrita</h2>
+        <p className="text-sm text-muted-foreground">Este painel é apenas para os pais.</p>
+      </div>
+    );
+  }
+
+  const PersonSummary = ({ person, filteredTasks, periodLabel }) => {
+    const earnings = calculateEarnings(filteredTasks.filter(t => t.person === person));
+    const personTasks = filteredTasks.filter(t => t.person === person);
+    const perfect = personTasks.filter(t => t.completion_type === 'on_time_no_reminder').length;
+    const withReminder = personTasks.filter(t => t.completion_type === 'on_time_with_reminder').length;
+    const late = personTasks.filter(t => t.completion_type === 'late').length;
+    const hasBonus = checkWeeklyBonus(tasks, person, currentWeek);
+    const failures = countFailures(tasks, person);
+
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-3xl">{PERSON_AVATARS[person]}</span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-foreground">{person}</h3>
+              {failures >= 3 && (
+                <Badge variant="destructive" className="text-[9px]">Penalizado</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{personTasks.length} tarefas {periodLabel}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-extrabold text-primary">€{earnings.toFixed(2)}</p>
+            {hasBonus && <p className="text-[10px] text-accent font-semibold">+€{WEEKLY_BONUS.toFixed(2)} bónus</p>}
+          </div>
+        </div>
+
+        {personTasks.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-primary/8 rounded-xl p-2 text-center">
+              <p className="text-lg font-bold text-primary">{perfect}</p>
+              <p className="text-[10px] text-muted-foreground">🌟 Perfeitas</p>
+            </div>
+            <div className="bg-accent/10 rounded-xl p-2 text-center">
+              <p className="text-lg font-bold text-accent">{withReminder}</p>
+              <p className="text-[10px] text-muted-foreground">⏰ Com aviso</p>
+            </div>
+            <div className="bg-destructive/8 rounded-xl p-2 text-center">
+              <p className="text-lg font-bold text-destructive">{late}</p>
+              <p className="text-[10px] text-muted-foreground">⚠️ Atrasadas</p>
+            </div>
+          </div>
+        )}
+      </Card>
+    );
+  };
+
+  const PaymentSummary = ({ filteredTasks }) => {
+    const total = PEOPLE.reduce((sum, p) => sum + calculateEarnings(filteredTasks.filter(t => t.person === p)), 0);
+    return (
+      <Card className="p-4 bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
+        <h3 className="text-sm font-bold text-foreground mb-3">💰 A Pagar</h3>
+        <div className="space-y-2">
+          {PEOPLE.map(person => {
+            const earnings = calculateEarnings(filteredTasks.filter(t => t.person === person));
+            return (
+              <div key={person} className="flex items-center justify-between">
+                <span className="text-sm text-foreground">{PERSON_AVATARS[person]} {person}</span>
+                <span className="text-sm font-bold text-primary">€{earnings.toFixed(2)}</span>
+              </div>
+            );
+          })}
+          <div className="border-t border-border pt-2 mt-2 flex items-center justify-between">
+            <span className="text-sm font-bold text-foreground">Total</span>
+            <span className="text-base font-extrabold text-primary">€{total.toFixed(2)}</span>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  return (
+    <>
+    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="w-5 h-5 text-primary" />
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Relatório</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">Desempenho e valores a pagar</p>
+      </motion.div>
+
+      <Tabs defaultValue="week" className="w-full">
+        <TabsList className="w-full grid grid-cols-2 mb-5 h-11 rounded-xl">
+          <TabsTrigger value="week" className="rounded-lg font-semibold">Esta Semana</TabsTrigger>
+          <TabsTrigger value="month" className="rounded-lg font-semibold">Este Mês</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="week" className="space-y-3">
+          <PaymentSummary filteredTasks={weekTasks} />
+          {PEOPLE.map(p => <PersonSummary key={p} person={p} filteredTasks={weekTasks} periodLabel="esta semana" />)}
+        </TabsContent>
+
+        <TabsContent value="month" className="space-y-3">
+          <PaymentSummary filteredTasks={monthTasks} />
+          {PEOPLE.map(p => <PersonSummary key={p} person={p} filteredTasks={monthTasks} periodLabel="este mês" />)}
+        </TabsContent>
+      </Tabs>
+
+      {/* Penalizações */}
+      <Card className="p-4 mt-4 mb-4">
+        <h3 className="text-sm font-bold text-foreground mb-3">⚠️ Penalizações (3 falhas/30 dias)</h3>
+        <div className="space-y-2">
+          {PEOPLE.map(person => {
+            const failures = countFailures(tasks, person);
+            return (
+              <div key={person} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                <div className="flex items-center gap-2">
+                  <span>{PERSON_AVATARS[person]}</span>
+                  <span className="text-sm font-medium">{person}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{failures}/3</span>
+                  {failures >= 3 ? (
+                    <Badge variant="destructive" className="text-[10px]">Sem {PENALTIES[person]}</Badge>
+                  ) : (
+                    <Badge className="bg-primary/10 text-primary text-[10px] border-0">OK</Badge>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Histórico */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-foreground">📋 Histórico por Filho</h3>
+        {PEOPLE.map(person => {
+          const personTasks = tasks.filter(t => t.person === person);
+          const isExpanded = expandedPerson === person;
+          return (
+            <Card key={person} className="overflow-hidden">
+              <button
+                onClick={() => setExpandedPerson(isExpanded ? null : person)}
+                className="w-full flex items-center justify-between p-4"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{PERSON_AVATARS[person]}</span>
+                  <span className="font-bold text-foreground">{person}</span>
+                  <Badge className="bg-muted text-muted-foreground text-[10px] border-0">
+                    {personTasks.length} tarefas
+                  </Badge>
+                </div>
+                {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-2">
+                  {personTasks.slice(0, 20).map(task => {
+                    const ct = COMPLETION_TYPES[task.completion_type];
+                    return (
+                      <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted text-sm">
+                        <span>{getTaskIcon(task.task_name)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{task.task_name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {task.date ? format(new Date(task.date), "d MMM yyyy", { locale: pt }) : ''}
+                          </p>
+                        </div>
+                        <span className={`font-bold ${ct?.color}`}>€{(task.value || 0).toFixed(2)}</span>
+                        <div className="flex gap-1">
+                          {task.photo_url && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPhotoUrl(task.photo_url)}>
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => deleteMutation.mutate(task.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {personTasks.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">Sem tarefas registadas</p>
+                  )}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+    <PhotoModal url={photoUrl} onClose={() => setPhotoUrl(null)} />
+    </>
+  );
+}

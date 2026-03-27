@@ -1,0 +1,42 @@
+{
+  "name": "OccasionalTask",
+  "type": "object",
+  "properties": {
+    "person": {
+      "type": "string",
+      "enum": [
+        "In\u00eas",
+        "Pedro",
+        "Miguel"
+      ],
+      "description": "Para quem \u00e9 a tarefa"
+    },
+    "task_name": {
+      "type": "string",
+      "description": "Nome da tarefa"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que deve ser feita"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Hora limite (HH:MM) - opcional"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionais"
+    },
+    "completed": {
+      "type": "boolean",
+      "description": "Se a tarefa foi conclu\u00edda",
+      "default": false
+    }
+  },
+  "required": [
+    "person",
+    "task_name",
+    "date"
+  ]
+}

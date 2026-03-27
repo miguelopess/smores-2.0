@@ -1,0 +1,52 @@
+{
+  "name": "ScheduledTask",
+  "type": "object",
+  "properties": {
+    "person": {
+      "type": "string",
+      "enum": [
+        "In\u00eas",
+        "Pedro",
+        "Miguel"
+      ],
+      "description": "Para quem \u00e9 a tarefa"
+    },
+    "task_name": {
+      "type": "string",
+      "description": "Nome da tarefa"
+    },
+    "days_of_week": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday"
+        ]
+      },
+      "description": "Dias da semana em que a tarefa \u00e9 obrigat\u00f3ria"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Hora de in\u00edcio (HH:MM)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Hora limite (HH:MM)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionais"
+    }
+  },
+  "required": [
+    "person",
+    "task_name",
+    "days_of_week"
+  ]
+}
