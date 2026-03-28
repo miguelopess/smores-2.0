@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { OccasionalTaskService } from '@/api/entities';
+import { sendPushNotification } from '@/api/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,14 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
         end_time: form.end_time || null,
         notes: form.notes || null,
         completed: false,
+      });
+
+      // Notify the assigned person via push
+      sendPushNotification({
+        person,
+        title: `📋 Nova tarefa: ${taskName}`,
+        body: form.end_time ? `Até às ${form.end_time} — ${form.date}` : `Para ${form.date}`,
+        tag: `new-task-${person}-${form.date}`,
       });
     });
     setForm({ task_name: '', custom_task: '', date: new Date().toISOString().split('T')[0], end_time: '', notes: '' });

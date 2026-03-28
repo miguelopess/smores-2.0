@@ -1,11 +1,12 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2 } from 'lucide-react';
+import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell } from 'lucide-react';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
 import { PERSON_AVATARS } from '@/lib/taskHelpers';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { usePushSubscription } from '@/lib/usePushSubscription';
 
 export default function AppLayout() {
   const location = useLocation();
@@ -13,6 +14,7 @@ export default function AppLayout() {
   const { logout } = useAuth();
   const userIsParent = isParent(user);
   const person = user?.linked_name;
+  const { pushSupported, pushSubscribed, subscribe: pushSubscribe } = usePushSubscription(user);
 
   const { data: scheduledTasks = [] } = useQuery({
     queryKey: ['scheduledTasks'],
@@ -70,7 +72,19 @@ export default function AppLayout() {
                   todayTasks={todayTasks}
                   person={person}
                   occasionalTasks={occasionalTasks}
+                  pushSupported={pushSupported}
+                  pushSubscribed={pushSubscribed}
+                  onEnablePush={pushSubscribe}
                 />
+              )}
+              {userIsParent && pushSupported && !pushSubscribed && (
+                <button
+                  onClick={pushSubscribe}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="Ativar notificações"
+                >
+                  <Bell className="w-4 h-4" />
+                </button>
               )}
               <button
                 onClick={() => logout()}

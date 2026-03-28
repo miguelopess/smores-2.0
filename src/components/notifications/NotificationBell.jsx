@@ -1,20 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Bell, X, CheckCircle, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPendingTasks } from '@/lib/useNotifications';
 import { TASK_ICONS } from '@/lib/taskHelpers';
 
-export default function NotificationBell({ scheduledTasks, todayTasks, person, occasionalTasks = [] }) {
+export default function NotificationBell({
+  scheduledTasks,
+  todayTasks,
+  person,
+  occasionalTasks = [],
+  pushSupported = false,
+  pushSubscribed = false,
+  onEnablePush,
+}) {
   const [open, setOpen] = useState(false);
-  const notifSupported = typeof Notification !== 'undefined';
-  const [permissionState, setPermissionState] = useState(notifSupported ? Notification.permission : 'denied');
+  const [enabling, setEnabling] = useState(false);
 
   const pending = getPendingTasks(scheduledTasks, todayTasks, person, occasionalTasks);
 
-  const requestPermission = async () => {
-    if (!notifSupported) return;
-    const result = await Notification.requestPermission();
-    setPermissionState(result);
+  const needsPermission = pushSupported && !pushSubscribed;
+
+  const handleEnablePush = async () => {
+    if (!onEnablePush) return;
+    setEnabling(true);
+    await onEnablePush();
+    setEnabling(false);
   };
 
   if (!person) return null;
@@ -54,14 +64,15 @@ export default function NotificationBell({ scheduledTasks, todayTasks, person, o
                 </button>
               </div>
 
-              {notifSupported && permissionState !== 'granted' && (
+              {needsPermission && (
                 <div className="px-4 py-3 bg-accent/10 border-b border-border">
-                  <p className="text-xs text-foreground mb-2">Ativa as notificações para receber alertas antes dos prazos!</p>
+                  <p className="text-xs text-foreground mb-2">Ativa as notificações para receber alertas mesmo com a app fechada!</p>
                   <button
-                    onClick={requestPermission}
-                    className="w-full py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold"
+                    onClick={handleEnablePush}
+                    disabled={enabling}
+                    className="w-full py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
                   >
-                    Ativar Notificações 🔔
+                    {enabling ? 'A ativar...' : 'Ativar Notificações 🔔'}
                   </button>
                 </div>
               )}

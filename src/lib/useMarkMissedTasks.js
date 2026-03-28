@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { TaskService } from '@/api/entities';
+import { sendPushNotification } from '@/api/supabaseClient';
 import { getWeekKey, getCurrentMonthKey } from './taskHelpers';
 
 // Checks the last 7 days for scheduled tasks that were never done and registers them as 'not_done'
@@ -50,6 +51,16 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
               week_key: getWeekKey(date),
               month_key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
             });
+
+            // Notify parents about missed task (only for yesterday)
+            if (daysBack === 1) {
+              sendPushNotification({
+                person: '__parents__',
+                title: `❌ Tarefa não feita`,
+                body: `${person} não completou: ${scheduledTask.task_name} (${dateStr})`,
+                tag: `missed-${person}-${scheduledTask.task_name}-${dateStr}`,
+              });
+            }
           }
         }
       }
