@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, X, CheckCircle, Clock } from 'lucide-react';
+import { Bell, BellRing, X, CheckCircle, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPendingTasks } from '@/lib/useNotifications';
 import { TASK_ICONS } from '@/lib/taskHelpers';
@@ -21,7 +21,9 @@ export default function NotificationBell({
 
   const needsPermission = pushSupported && !pushSubscribed;
 
-  const handleEnablePush = async () => {
+  const handleEnablePush = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!onEnablePush || enabling) return;
     setEnabling(true);
     try {
@@ -29,17 +31,29 @@ export default function NotificationBell({
       if (result?.success) {
         toast.success('Notificações ativadas! 🔔');
       } else {
-        toast.error(`Erro ao ativar: ${result?.reason || 'desconhecido'}`);
-        console.error('[Push] Enable failed:', result);
+        toast.error(`Erro: ${result?.reason || 'desconhecido'}`);
       }
     } catch (err) {
       toast.error('Erro ao ativar notificações');
-      console.error('[Push] Enable error:', err);
     }
     setEnabling(false);
   };
 
   if (!person) return null;
+
+  // If push not enabled yet, show a prominent activate button instead of the bell
+  if (needsPermission) {
+    return (
+      <button
+        onClick={handleEnablePush}
+        disabled={enabling}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold transition-all active:scale-95 disabled:opacity-50"
+      >
+        <BellRing className="w-3.5 h-3.5" />
+        {enabling ? 'A ativar...' : 'Ativar 🔔'}
+      </button>
+    );
+  }
 
   return (
     <div className="relative">
@@ -75,19 +89,6 @@ export default function NotificationBell({
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
-
-              {needsPermission && (
-                <div className="px-4 py-3 bg-accent/10 border-b border-border">
-                  <p className="text-xs text-foreground mb-2">Ativa as notificações para receber alertas mesmo com a app fechada!</p>
-                  <button
-                    onClick={handleEnablePush}
-                    disabled={enabling}
-                    className="w-full py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-                  >
-                    {enabling ? 'A ativar...' : 'Ativar Notificações 🔔'}
-                  </button>
-                </div>
-              )}
 
               <div className="max-h-64 overflow-y-auto">
                 {pending.length === 0 ? (
