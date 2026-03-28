@@ -3,6 +3,7 @@ import { Bell, X, CheckCircle, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPendingTasks } from '@/lib/useNotifications';
 import { TASK_ICONS } from '@/lib/taskHelpers';
+import { toast } from 'sonner';
 
 export default function NotificationBell({
   scheduledTasks,
@@ -21,9 +22,20 @@ export default function NotificationBell({
   const needsPermission = pushSupported && !pushSubscribed;
 
   const handleEnablePush = async () => {
-    if (!onEnablePush) return;
+    if (!onEnablePush || enabling) return;
     setEnabling(true);
-    await onEnablePush();
+    try {
+      const result = await onEnablePush();
+      if (result?.success) {
+        toast.success('Notificações ativadas! 🔔');
+      } else {
+        toast.error(`Erro ao ativar: ${result?.reason || 'desconhecido'}`);
+        console.error('[Push] Enable failed:', result);
+      }
+    } catch (err) {
+      toast.error('Erro ao ativar notificações');
+      console.error('[Push] Enable error:', err);
+    }
     setEnabling(false);
   };
 

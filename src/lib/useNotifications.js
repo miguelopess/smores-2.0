@@ -22,9 +22,7 @@ export function useNotifications({ scheduledTasks, todayTasks, person, occasiona
     if (!person) return;
     if (typeof Notification === 'undefined') return;
 
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    // Don't auto-request permission here — push subscription handles it
 
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];

@@ -19,20 +19,33 @@ function urlBase64ToUint8Array(base64String) {
  */
 export async function subscribeToPush(userId, person) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('[Push] Not supported in this browser');
     return { success: false, reason: 'push-not-supported' };
   }
 
+  if (!VAPID_PUBLIC_KEY) {
+    console.error('[Push] VITE_VAPID_PUBLIC_KEY is not set!');
+    return { success: false, reason: 'no-vapid-key' };
+  }
+
+  console.log('[Push] Subscribing for', person, 'userId:', userId);
+
   try {
     const registration = await navigator.serviceWorker.ready;
+    console.log('[Push] Service worker ready');
 
     // Check for existing subscription
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
+      console.log('[Push] No existing subscription, creating new one...');
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
+      console.log('[Push] Browser subscription created');
+    } else {
+      console.log('[Push] Using existing browser subscription');
     }
 
     const subscriptionJson = subscription.toJSON();
@@ -50,17 +63,18 @@ export async function subscribeToPush(userId, person) {
     );
 
     if (error) {
-      console.error('Failed to save push subscription:', error);
-      return { success: false, reason: 'db-error' };
+      console.error('[Push] Failed to save to Supabase:', error);
+      return { success: false, reason: 'db-error', detail: error.message };
     }
 
+    console.log('[Push] Subscription saved to Supabase successfully!');
     return { success: true };
   } catch (err) {
-    console.error('Push subscription failed:', err);
+    console.error('[Push] Subscription failed:', err);
     if (err.name === 'NotAllowedError') {
       return { success: false, reason: 'permission-denied' };
     }
-    return { success: false, reason: 'unknown' };
+    return { success: false, reason: 'unknown', detail: err.message };
   }
 }
 
