@@ -30,6 +30,12 @@ CREATE POLICY "Users can delete own subscriptions"
   ON push_subscriptions FOR DELETE
   USING (auth.uid() = user_id);
 
+-- Users can update their own subscriptions (needed for upsert)
+CREATE POLICY "Users can update own subscriptions"
+  ON push_subscriptions FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Index for fast lookup by person (used when sending notifications)
 CREATE INDEX idx_push_subscriptions_person ON push_subscriptions(person);
 
