@@ -1,12 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from './AuthContext';
 
 export function useCurrentUser() {
-  return useQuery({
-    queryKey: ['me'],
-    queryFn: () => base44.auth.me(),
-    staleTime: 1000 * 60 * 5,
-  });
+  const { user, isLoadingAuth } = useAuth();
+  return { data: user, isLoading: isLoadingAuth };
 }
 
 export function isParent(user) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { ScheduledTaskService } from '@/api/entities';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
   const [showCustom, setShowCustom] = useState(false);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ScheduledTask.create(data),
+    mutationFn: (data) => ScheduledTaskService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledTasks'] });
       setForm({ task_name: '', custom_task: '', days_of_week: [], end_time: '' });
@@ -47,7 +47,7 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ScheduledTask.delete(id),
+    mutationFn: (id) => ScheduledTaskService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledTasks'] });
       toast.success('Tarefa removida');

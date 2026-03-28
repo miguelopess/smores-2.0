@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { TaskService } from '@/api/entities';
 import { getWeekKey, getCurrentMonthKey } from './taskHelpers';
 
 // Checks the last 7 days for scheduled tasks that were never done and registers them as 'not_done'
@@ -41,7 +41,7 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
           );
 
           if (!alreadyRecorded) {
-            await base44.entities.Task.create({
+            await TaskService.create({
               person,
               task_name: scheduledTask.task_name,
               completion_type: 'not_done',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { TaskService } from '@/api/entities';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { Lock, Shield, ChevronDown, ChevronUp, Eye, Trash2, TrendingUp, Star } from 'lucide-react';
 import PhotoModal from '@/components/parents/PhotoModal';
@@ -24,11 +24,11 @@ export default function Parents() {
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-created_date', 500),
+    queryFn: () => TaskService.list('-created_date', 500),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.delete(id),
+    mutationFn: (id) => TaskService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Tarefa removida');

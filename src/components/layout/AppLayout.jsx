@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2 } from 'lucide-react';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
+import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
 import { PERSON_AVATARS } from '@/lib/taskHelpers';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -9,24 +10,25 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 export default function AppLayout() {
   const location = useLocation();
   const { data: user } = useCurrentUser();
+  const { logout } = useAuth();
   const userIsParent = isParent(user);
   const person = user?.linked_name;
 
   const { data: scheduledTasks = [] } = useQuery({
     queryKey: ['scheduledTasks'],
-    queryFn: () => base44.entities.ScheduledTask.list(),
+    queryFn: () => ScheduledTaskService.list(),
     enabled: !userIsParent && !!person,
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-created_date', 500),
+    queryFn: () => TaskService.list('-created_date', 500),
     enabled: !userIsParent && !!person,
   });
 
   const { data: occasionalTasks = [] } = useQuery({
     queryKey: ['occasionalTasks'],
-    queryFn: () => base44.entities.OccasionalTask.list('-date', 200),
+    queryFn: () => OccasionalTaskService.list('-date', 200),
     enabled: !userIsParent && !!person,
   });
 
@@ -71,7 +73,7 @@ export default function AppLayout() {
                 />
               )}
               <button
-                onClick={() => base44.auth.logout()}
+                onClick={() => logout()}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <LogOut className="w-4 h-4" />

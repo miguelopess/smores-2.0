@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { TaskService } from '@/api/entities';
+import { uploadTaskPhoto } from '@/api/storage';
 import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Loader2 } from 'lucide-react';
@@ -27,10 +28,9 @@ export default function TaskCompleteModal({ task, person, onClose }) {
     mutationFn: async (completionType) => {
       let photo_url = '';
       if (photo) {
-        const result = await base44.integrations.Core.UploadFile({ file: photo });
-        photo_url = result.file_url;
+        photo_url = await uploadTaskPhoto(photo);
       }
-      return base44.entities.Task.create({
+      return TaskService.create({
         person,
         task_name: task.task_name,
         completion_type: completionType,

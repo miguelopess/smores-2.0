@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { OccasionalTaskService } from '@/api/entities';
 import { Clock, CheckCircle2, Circle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
     .sort((a, b) => (a.end_time || '99:99').localeCompare(b.end_time || '99:99'));
 
   const markOccasionalDone = useMutation({
-    mutationFn: (id) => base44.entities.OccasionalTask.update(id, { completed: true }),
+    mutationFn: (id) => OccasionalTaskService.update(id, { completed: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] }),
   });
 

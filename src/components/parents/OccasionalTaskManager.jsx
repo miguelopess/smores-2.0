@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { OccasionalTaskService } from '@/api/entities';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
   const [showCustom, setShowCustom] = useState(false);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.OccasionalTask.create(data),
+    mutationFn: (data) => OccasionalTaskService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
       setForm({ task_name: '', custom_task: '', date: new Date().toISOString().split('T')[0], end_time: '', notes: '' });
@@ -40,7 +40,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.OccasionalTask.delete(id),
+    mutationFn: (id) => OccasionalTaskService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
       toast.success('Tarefa removida');

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { TaskService } from '@/api/entities';
+import { uploadTaskPhoto } from '@/api/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,10 +33,9 @@ export default function RegisterTask() {
     mutationFn: async (data) => {
       let photo_url = '';
       if (photo) {
-        const result = await base44.integrations.Core.UploadFile({ file: photo });
-        photo_url = result.file_url;
+        photo_url = await uploadTaskPhoto(photo);
       }
-      return base44.entities.Task.create({ ...data, photo_url, month_key: getCurrentMonthKey() });
+      return TaskService.create({ ...data, photo_url, month_key: getCurrentMonthKey() });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

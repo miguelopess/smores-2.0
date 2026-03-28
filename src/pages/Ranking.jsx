@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { TaskService } from '@/api/entities';
 import { PEOPLE, PERSON_AVATARS, COMPLETION_TYPES, getCurrentWeekKey, getWeekTasks, calculateEarnings, checkWeeklyBonus, WEEKLY_BONUS } from '@/lib/taskHelpers';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ export default function Ranking() {
   
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-created_date', 500),
+    queryFn: () => TaskService.list('-created_date', 500),
   });
 
   const getRanking = (filteredTasks) => {

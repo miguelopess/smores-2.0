@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { Lock, CalendarDays, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -12,12 +12,12 @@ export default function Rotinas() {
 
   const { data: scheduledTasks = [], isLoading } = useQuery({
     queryKey: ['scheduledTasks'],
-    queryFn: () => base44.entities.ScheduledTask.list(),
+    queryFn: () => ScheduledTaskService.list(),
   });
 
   const { data: occasionalTasks = [], isLoading: loadingOccasional } = useQuery({
     queryKey: ['occasionalTasks'],
-    queryFn: () => base44.entities.OccasionalTask.list('-date', 200),
+    queryFn: () => OccasionalTaskService.list('-date', 200),
   });
 
   if (isLoading || loadingUser || loadingOccasional) {
