@@ -11,19 +11,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 export async function sendPushNotification({ person, title, body, url, tag }) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) return;
-
-    await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ person, title, body, url, tag }),
+    console.log('[sendPush] Sending to', person, ':', title);
+    const { data, error } = await supabase.functions.invoke('send-push-notification', {
+      body: { person, title, body, url, tag },
     });
+
+    if (error) {
+      console.error('[sendPush] Error:', error);
+    } else {
+      console.log('[sendPush] Response:', data);
+    }
   } catch (err) {
-    console.error('Failed to send push notification:', err);
+    console.error('[sendPush] Failed:', err);
   }
 }
