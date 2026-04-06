@@ -29,10 +29,27 @@ export async function subscribeToPush(userId, person) {
   }
 
   console.log('[Push] Subscribing for', person, 'userId:', userId);
+  console.log('[Push] VAPID key present:', !!VAPID_PUBLIC_KEY, 'length:', VAPID_PUBLIC_KEY?.length);
 
   try {
+    // Explicitly request notification permission first (required on mobile)
+    if (typeof Notification !== 'undefined') {
+      console.log('[Push] Current permission:', Notification.permission);
+      if (Notification.permission === 'default') {
+        console.log('[Push] Requesting notification permission...');
+        const perm = await Notification.requestPermission();
+        console.log('[Push] Permission result:', perm);
+        if (perm !== 'granted') {
+          return { success: false, reason: 'permission-denied' };
+        }
+      } else if (Notification.permission === 'denied') {
+        console.log('[Push] Permission previously denied');
+        return { success: false, reason: 'permission-blocked' };
+      }
+    }
+
     const registration = await navigator.serviceWorker.ready;
-    console.log('[Push] Service worker ready');
+    console.log('[Push] Service worker ready, scope:', registration.scope);
 
     // Check for existing subscription
     let subscription = await registration.pushManager.getSubscription();
@@ -45,29 +62,33 @@ export async function subscribeToPush(userId, person) {
       });
       console.log('[Push] Browser subscription created');
     } else {
-      console.log('[Push] Using existing browser subscription');
+      console.log('[Push] Using existing browser subscription, endpoint:', subscription.endpoint?.substring(0, 60) + '...');
     }
 
     const subscriptionJson = subscription.toJSON();
+    console.log('[Push] Subscription JSON keys present:', !!subscriptionJson.keys?.p256dh, !!subscriptionJson.keys?.auth);
 
     // Upsert to Supabase (unique on endpoint)
-    const { error } = await supabase.from('push_subscriptions').upsert(
-      {
-        user_id: userId,
-        person,
-        endpoint: subscriptionJson.endpoint,
-        keys_p256dh: subscriptionJson.keys.p256dh,
-        keys_auth: subscriptionJson.keys.auth,
-      },
+    const payload = {
+      user_id: userId,
+      person,
+      endpoint: subscriptionJson.endpoint,
+      keys_p256dh: subscriptionJson.keys.p256dh,
+      keys_auth: subscriptionJson.keys.auth,
+    };
+    console.log('[Push] Upserting to Supabase, person:', person, 'endpoint:', payload.endpoint?.substring(0, 60));
+
+    const { data, error } = await supabase.from('push_subscriptions').upsert(
+      payload,
       { onConflict: 'endpoint' }
-    );
+    ).select();
 
     if (error) {
       console.error('[Push] Failed to save to Supabase:', error);
       return { success: false, reason: 'db-error', detail: error.message };
     }
 
-    console.log('[Push] Subscription saved to Supabase successfully!');
+    console.log('[Push] Subscription saved to Supabase successfully! Row:', data);
     return { success: true };
   } catch (err) {
     console.error('[Push] Subscription failed:', err);

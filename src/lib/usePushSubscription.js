@@ -38,7 +38,9 @@ export function usePushSubscription(user) {
 
     // Only auto-subscribe if notification permission is already granted
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      console.log('[usePushSubscription] Auto-subscribing for', person);
       subscribeToPush(userId, person).then((result) => {
+        console.log('[usePushSubscription] Auto-subscribe result:', result);
         if (result.success) {
           setPushState((prev) => ({ ...prev, subscribed: true }));
         }
@@ -47,7 +49,10 @@ export function usePushSubscription(user) {
   }, [userId, person, pushState.loading, pushState.supported, pushState.subscribed]);
 
   const subscribe = useCallback(async () => {
-    if (!userId || !person) return { success: false, reason: 'no-user' };
+    if (!userId || !person) {
+      console.warn('[usePushSubscription] subscribe called but no user/person', { userId, person });
+      return { success: false, reason: 'no-user' };
+    }
 
     setPushState((prev) => ({ ...prev, loading: true }));
     const result = await subscribeToPush(userId, person);

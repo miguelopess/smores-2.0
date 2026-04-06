@@ -26,15 +26,20 @@ export default function NotificationBell({
     e.stopPropagation();
     if (!onEnablePush || enabling) return;
     setEnabling(true);
+    console.log('[NotificationBell] Ativar clicked, calling onEnablePush...');
     try {
       const result = await onEnablePush();
+      console.log('[NotificationBell] onEnablePush result:', result);
       if (result?.success) {
         toast.success('Notificações ativadas! 🔔');
       } else {
-        toast.error(`Erro: ${result?.reason || 'desconhecido'}`);
+        const msg = result?.detail || result?.reason || 'desconhecido';
+        toast.error(`Erro ao ativar: ${msg}`);
+        console.error('[NotificationBell] Subscribe failed:', msg);
       }
     } catch (err) {
-      toast.error('Erro ao ativar notificações');
+      console.error('[NotificationBell] Exception:', err);
+      toast.error('Erro ao ativar notificações: ' + err.message);
     }
     setEnabling(false);
   };
