@@ -112,7 +112,23 @@ export async function getPushSubscriptionState() {
   try {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
-    return { supported: true, subscribed: !!subscription };
+
+    if (!subscription) {
+      return { supported: true, subscribed: false };
+    }
+
+    const { data, error } = await supabase
+      .from('push_subscriptions')
+      .select('id')
+      .eq('endpoint', subscription.endpoint)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Push] Failed to verify subscription in Supabase:', error);
+      return { supported: true, subscribed: false };
+    }
+
+    return { supported: true, subscribed: !!data };
   } catch {
     return { supported: true, subscribed: false };
   }
