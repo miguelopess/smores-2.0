@@ -3,7 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, Lock, AlertCircle, Check } from 'lucide-react';
 
 const RING_SIZES = [700, 560, 420, 300];
 const RING_OPACITIES = [0.07, 0.11, 0.15, 0.19];
@@ -13,11 +13,14 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    localStorage.setItem('homi_remember', rememberMe ? '1' : '0');
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -165,6 +168,31 @@ export default function Login() {
                 />
               </div>
             </div>
+
+            {/* Remember me */}
+            <button
+              type="button"
+              onClick={() => setRememberMe((v) => !v)}
+              className="flex items-center gap-2.5 w-fit group"
+            >
+              <span
+                className="flex items-center justify-center w-4.5 h-4.5 rounded transition-all"
+                style={{
+                  width: 18,
+                  height: 18,
+                  minWidth: 18,
+                  background: rememberMe ? 'rgba(61,217,160,0.85)' : 'rgba(255,255,255,0.07)',
+                  border: rememberMe ? '1.5px solid #3dd9a0' : '1.5px solid rgba(255,255,255,0.2)',
+                  borderRadius: 5,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {rememberMe && <Check className="w-3 h-3" style={{ color: '#071818', strokeWidth: 3 }} />}
+              </span>
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Manter sessão iniciada
+              </span>
+            </button>
 
             {/* Error */}
             {error && (

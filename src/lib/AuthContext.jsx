@@ -9,14 +9,9 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    // Check current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setIsLoadingAuth(false);
-      }
-    });
+    // Capture BEFORE setting the flag — null means fresh browser start
+    const tabWasActive = sessionStorage.getItem('homi_tab_active');
+    sessionStorage.setItem('homi_tab_active', '1');
 
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -25,6 +20,22 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null);
         setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+      }
+    });
+
+    // Check current session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const remember = localStorage.getItem('homi_remember') !== '0'; // default true
+        if (!remember && !tabWasActive) {
+          // Fresh browser start + user opted out of persistent session
+          await supabase.auth.signOut();
+          // onAuthStateChange will clean up state
+        } else {
+          fetchProfile(session.user.id);
+        }
+      } else {
         setIsLoadingAuth(false);
       }
     });
