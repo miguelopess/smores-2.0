@@ -3,8 +3,10 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
+
+const RING_SIZES = [700, 560, 420, 300];
+const RING_OPACITIES = [0.07, 0.11, 0.15, 0.19];
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -30,50 +32,171 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm p-6 space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-extrabold text-foreground mt-2">Homi</h1>
-          <p className="text-sm text-muted-foreground mt-1">Entra na tua conta</p>
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden px-4"
+      style={{ background: 'linear-gradient(145deg, #1a5858 0%, #0c2e2e 50%, #071818 100%)' }}
+    >
+      {/* Decorative concentric rings — mirrors the logo motif */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+        {RING_SIZES.map((size, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: size,
+              height: size,
+              border: `1.2px solid rgba(80,180,160,${RING_OPACITIES[i]})`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Glow blob */}
+      <div
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        style={{
+          width: 320,
+          height: 320,
+          background: 'radial-gradient(circle, rgba(61,217,160,0.12) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-sm z-10">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <h1
+            className="text-6xl font-semibold tracking-tight"
+            style={{ color: '#3dd9a0', fontFamily: "'Nunito', 'Inter', sans-serif", letterSpacing: '-0.5px' }}
+          >
+            Homi
+          </h1>
+          <p className="text-sm mt-2 font-medium" style={{ color: 'rgba(61,217,160,0.55)' }}>
+            Organiza a tua família
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="o-teu-email@exemplo.com"
-              required
-              autoComplete="email"
-            />
+        {/* Glass card */}
+        <div
+          className="rounded-2xl p-7 space-y-6"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.09)',
+            boxShadow: '0 32px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(61,217,160,0.06)',
+          }}
+        >
+          <div>
+            <h2 className="text-lg font-bold text-white">Bem-vindo de volta</h2>
+            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              Entra na tua conta para continuar
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="email"
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'rgba(255,255,255,0.5)' }}
+              >
+                Email
+              </Label>
+              <div className="relative">
+                <Mail
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                  style={{ color: 'rgba(61,217,160,0.5)' }}
+                />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="o-teu-email@exemplo.com"
+                  required
+                  autoComplete="email"
+                  className="pl-10 h-11 placeholder:text-white/20 focus-visible:outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'white',
+                    borderRadius: '0.625rem',
+                    boxShadow: 'none',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = 'rgba(61,217,160,0.5)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                />
+              </div>
+            </div>
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="password"
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'rgba(255,255,255,0.5)' }}
+              >
+                Password
+              </Label>
+              <div className="relative">
+                <Lock
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                  style={{ color: 'rgba(61,217,160,0.5)' }}
+                />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="pl-10 h-11 placeholder:text-white/20 focus-visible:outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'white',
+                    borderRadius: '0.625rem',
+                    boxShadow: 'none',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = 'rgba(61,217,160,0.5)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                />
+              </div>
+            </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Entrar
-          </Button>
-        </form>
-      </Card>
+            {/* Error */}
+            {error && (
+              <div
+                className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
+                style={{
+                  background: 'rgba(220,38,38,0.15)',
+                  border: '1px solid rgba(220,38,38,0.25)',
+                }}
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <p className="text-sm text-red-300">{error}</p>
+              </div>
+            )}
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="w-full h-11 font-bold text-sm tracking-wide mt-1 border-0 transition-opacity hover:opacity-90 active:opacity-80"
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #3dd9a0 0%, #2ab07d 100%)',
+                color: '#071818',
+                boxShadow: '0 4px 20px rgba(61,217,160,0.35)',
+              }}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Entrar
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
