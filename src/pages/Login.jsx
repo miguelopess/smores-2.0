@@ -8,7 +8,18 @@ import { Loader2, Mail, Lock, AlertCircle, Check } from 'lucide-react';
 const RING_SIZES = [700, 560, 420, 300];
 const RING_OPACITIES = [0.07, 0.11, 0.15, 0.19];
 
+function useThemeColor(color) {
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const prev = meta?.getAttribute('content');
+    meta?.setAttribute('content', color);
+    return () => { if (prev) meta?.setAttribute('content', prev); };
+  }, [color]);
+}
+
 export default function Login() {
+  useThemeColor('#071818');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
