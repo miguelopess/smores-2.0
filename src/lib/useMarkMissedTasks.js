@@ -26,7 +26,7 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
       for (let daysBack = 1; daysBack <= 7; daysBack++) {
         const date = new Date(today);
         date.setDate(today.getDate() - daysBack);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         const dayKey = DAY_KEYS[date.getDay()];
 
         const myTasksForDay = scheduledTasks.filter(

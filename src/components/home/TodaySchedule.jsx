@@ -5,7 +5,7 @@ import { Clock, CheckCircle2, Circle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { TASK_ICONS } from '@/lib/taskHelpers';
+import { TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
 import TaskCompleteModal from './TaskCompleteModal';
 
 const DAYS_MAP = {
@@ -43,14 +43,15 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
   const [selectedOccasional, setSelectedOccasional] = useState(null);
   const queryClient = useQueryClient();
   const todayKey = getTodayKey();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
 
   const todaySchedule = scheduledTasks
     .filter(t => t.person === person && t.days_of_week?.includes(todayKey))
+    .filter(t => isTaskDone(t, todayTasks) || !isOverdue(t.end_time))
     .sort((a, b) => (a.start_time || '00:00').localeCompare(b.start_time || '00:00'));
 
   const todayOccasional = occasionalTasks
-    .filter(t => t.person === person && t.date === today && !t.completed)
+    .filter(t => t.person === person && t.date === today && !t.completed && !isOverdue(t.end_time))
     .sort((a, b) => (a.end_time || '99:99').localeCompare(b.end_time || '99:99'));
 
   const markOccasionalDone = useMutation({

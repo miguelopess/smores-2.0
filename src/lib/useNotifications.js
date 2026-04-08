@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getLocalDateStr } from './taskHelpers';
 
 function getTodayKey() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
@@ -28,7 +29,7 @@ export function useNotifications({ scheduledTasks, todayTasks, person, occasiona
     timersRef.current = [];
 
     const todayKey = getTodayKey();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
 
     // Scheduled tasks notifications
     const myScheduledTasks = scheduledTasks.filter(
@@ -80,7 +81,7 @@ export function useNotifications({ scheduledTasks, todayTasks, person, occasiona
 export function getPendingTasks(scheduledTasks, todayTasks, person, occasionalTasks = []) {
   if (!person) return [];
   const todayKey = getTodayKey();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
 
   const pendingScheduled = scheduledTasks.filter((task) => {
     if (task.person !== person) return false;

@@ -3,7 +3,7 @@ import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
-import { PERSON_AVATARS } from '@/lib/taskHelpers';
+import { PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { usePushSubscription } from '@/lib/usePushSubscription';
@@ -34,7 +34,7 @@ export default function AppLayout() {
     enabled: !userIsParent && !!person,
   });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   const todayTasks = tasks.filter(t => t.date === today && t.person === person);
 
   const navItems = [

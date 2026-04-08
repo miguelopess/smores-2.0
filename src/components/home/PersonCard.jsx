@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PERSON_AVATARS, PENALTIES, calculateEarnings, countFailures } from '@/lib/taskHelpers';
+import { PERSON_AVATARS, PENALTIES, calculateEarnings, countFailures, getLocalDateStr } from '@/lib/taskHelpers';
 import { TrendingUp, AlertTriangle } from 'lucide-react';
 
 export default function PersonCard({ person, tasks, weekTasks, index }) {
@@ -10,7 +10,7 @@ export default function PersonCard({ person, tasks, weekTasks, index }) {
   const totalEarnings = calculateEarnings(personTasks);
   const weekEarnings = calculateEarnings(personWeekTasks);
   const failures = countFailures(tasks, person);
-  const todayTasks = personTasks.filter(t => t.date === new Date().toISOString().split('T')[0]);
+  const todayTasks = personTasks.filter(t => t.date === getLocalDateStr());
 
   return (
     <motion.div

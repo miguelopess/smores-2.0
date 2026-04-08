@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { toast } from 'sonner';
 
@@ -215,7 +215,7 @@ export default function Parents() {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{task.task_name}</p>
                           <p className="text-[10px] text-muted-foreground">
-                            {task.date ? format(new Date(task.date), "d MMM yyyy", { locale: pt }) : ''}
+                            {task.date ? format(parse(task.date, 'yyyy-MM-dd', new Date()), "d MMM yyyy", { locale: pt }) : ''}
                           </p>
                         </div>
                         <span className={`font-bold ${ct?.color}`}>€{(task.value || 0).toFixed(2)}</span>

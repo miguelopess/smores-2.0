@@ -71,6 +71,10 @@ export function getTaskIcon(taskName) {
   return TASK_ICONS[taskName] || '✅';
 }
 
+export function getLocalDateStr(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 // Week of month: 1-4 (or 5 in rare cases)
 export function getWeekOfMonth(date) {
   const d = new Date(date);

@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus, Clock, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
-import { PEOPLE, PERSON_AVATARS, COMMON_TASKS, TASK_ICONS } from '@/lib/taskHelpers';
-import { format } from 'date-fns';
+import { PEOPLE, PERSON_AVATARS, COMMON_TASKS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
+import { format, parse } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
 export default function OccasionalTaskManager({ occasionalTasks }) {
@@ -24,7 +24,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
   const [form, setForm] = useState({
     task_name: '',
     custom_task: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateStr(),
     end_time: '',
     notes: '',
   });
@@ -34,7 +34,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
     mutationFn: (data) => OccasionalTaskService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
-      setForm({ task_name: '', custom_task: '', date: new Date().toISOString().split('T')[0], end_time: '', notes: '' });
+      setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '' });
       setShowCustom(false);
       toast.success('Tarefa ocasional criada!');
     },
@@ -72,11 +72,11 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
         tag: `new-task-${person}-${form.date}`,
       });
     });
-    setForm({ task_name: '', custom_task: '', date: new Date().toISOString().split('T')[0], end_time: '', notes: '' });
+    setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '' });
     setShowCustom(false);
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   const [viewPerson, setViewPerson] = useState(PEOPLE[0]);
   const personTasks = occasionalTasks
     .filter(t => t.person === viewPerson)
@@ -241,9 +241,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
                 <p className="text-sm font-semibold text-foreground">{task.task_name}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-[11px] text-primary font-medium">
-                    {format(new Date(task.date), "d MMM", { locale: pt })}
-                  </span>
-                  {task.end_time && (
+                    {format(parse(task.date, 'yyyy-MM-dd', new Date()), "d MMM", { locale: pt })}
                     <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                       <Clock className="w-3 h-3" /> até às {task.end_time}
                     </span>
@@ -274,7 +272,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground line-through">{task.task_name}</p>
                 <span className="text-[11px] text-muted-foreground">
-                  {format(new Date(task.date), "d MMM", { locale: pt })}
+                  {format(parse(task.date, 'yyyy-MM-dd', new Date()), "d MMM", { locale: pt })}
                 </span>
               </div>
               <Button

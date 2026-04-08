@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
-import { PEOPLE, PERSON_AVATARS, getCurrentWeekKey, getWeekTasks, PENALTIES, countFailures } from '@/lib/taskHelpers';
+import { PEOPLE, PERSON_AVATARS, getCurrentWeekKey, getWeekTasks, PENALTIES, countFailures, getLocalDateStr } from '@/lib/taskHelpers';
 import PersonCard from '@/components/home/PersonCard';
 import WeeklyBonusBanner from '@/components/home/WeeklyBonusBanner';
 import RecentActivity from '@/components/home/RecentActivity';
@@ -37,7 +37,7 @@ export default function Home() {
 
   const weekTasks = getWeekTasks(tasks, currentWeek);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   const todayTasks = tasks.filter(t => t.date === today);
 
   useMarkMissedTasks({

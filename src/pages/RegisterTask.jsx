@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { CheckCircle2, Camera, Loader2, Lock } from 'lucide-react';
-import { COMPLETION_TYPES, COMMON_TASKS, PERSON_AVATARS, TASK_ICONS, getWeekKey, getCurrentMonthKey } from '@/lib/taskHelpers';
+import { COMPLETION_TYPES, COMMON_TASKS, PERSON_AVATARS, TASK_ICONS, getWeekKey, getCurrentMonthKey, getLocalDateStr } from '@/lib/taskHelpers';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import TaskGrid from '@/components/register/TaskGrid';
 
@@ -23,7 +23,7 @@ export default function RegisterTask() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
 
   // Determine person from logged-in user
   const person = user?.linked_name;

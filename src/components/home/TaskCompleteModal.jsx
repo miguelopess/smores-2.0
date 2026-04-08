@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskService } from '@/api/entities';
 import { uploadTaskPhoto } from '@/api/storage';
-import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS } from '@/lib/taskHelpers';
+import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ function isWithinTimeWindow(startTime, endTime) {
 
 export default function TaskCompleteModal({ task, person, onClose }) {
   const queryClient = useQueryClient();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   const inTime = isWithinTimeWindow(task?.start_time, task?.end_time);
   const [selectedType, setSelectedType] = useState(null);
   const [photo, setPhoto] = useState(null);
