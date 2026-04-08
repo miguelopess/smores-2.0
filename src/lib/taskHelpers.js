@@ -131,9 +131,9 @@ export function countFailures(tasks, person) {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
   
-  return tasks.filter(t => 
-    t.person === person && 
+  return tasks.filter(t =>
+    t.person === person &&
     (t.completion_type === 'late' || t.completion_type === 'not_done') &&
-    new Date(t.date) >= thirtyDaysAgo
+    new Date(t.date + 'T12:00:00') >= thirtyDaysAgo
   ).length;
 }

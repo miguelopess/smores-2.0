@@ -1,11 +1,11 @@
 import { COMPLETION_TYPES, PERSON_AVATARS, getTaskIcon } from '@/lib/taskHelpers';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 
 export default function RecentActivity({ tasks }) {
   const recent = [...tasks]
-    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.created_date) - new Date(a.created_date))
     .slice(0, 8);
 
   if (recent.length === 0) {
@@ -35,7 +35,7 @@ export default function RecentActivity({ tasks }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{task.task_name}</p>
               <p className="text-[11px] text-muted-foreground">
-                {task.person} · {task.date ? format(new Date(task.date), "d MMM", { locale: pt }) : ''}
+                {task.person} · {task.date ? format(parse(task.date, 'yyyy-MM-dd', new Date()), "d MMM", { locale: pt }) : ''}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
