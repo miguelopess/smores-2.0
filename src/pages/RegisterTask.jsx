@@ -165,7 +165,7 @@ export default function RegisterTask() {
                 Como foi feita?
               </Label>
               <div className="space-y-2">
-                {Object.entries(COMPLETION_TYPES).map(([key, ct]) => (
+                {Object.entries(COMPLETION_TYPES).filter(([key]) => key !== 'not_done').map(([key, ct]) => (
                   <button
                     key={key}
                     onClick={() => setCompletionType(key)}
