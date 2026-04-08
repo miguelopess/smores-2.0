@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: false,
       manifest: {
-        name: 'Tarefas de Casa',
-        short_name: 'Smores',
+        name: 'Homi',
+        short_name: 'Homi',
         description: 'Gestão de tarefas domésticas da família',
         theme_color: '#7c3aed',
         background_color: '#0f0a1a',

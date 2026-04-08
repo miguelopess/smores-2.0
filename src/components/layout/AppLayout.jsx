@@ -42,7 +42,7 @@ export default function AppLayout() {
     ...(!userIsParent ? [{ path: '/registar', icon: PlusCircle, label: 'Registar' }] : []),
     { path: '/ranking', icon: Trophy, label: 'Ranking' },
     ...(userIsParent ? [
-      { path: '/rotinas', icon: CalendarDays, label: 'Tarefas' },
+      { path: '/rotinas', icon: CalendarDays, label: 'Rotinas' },
       { path: '/pais', icon: BarChart2, label: 'Relatório' },
     ] : []),
   ];
@@ -53,8 +53,7 @@ export default function AppLayout() {
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🏠</span>
-            <span className="font-extrabold text-foreground tracking-tight">Tarefas de Casa</span>
+            <span className="font-extrabold text-foreground tracking-tight">Homi</span>
           </div>
           {user && (
             <div className="flex items-center gap-2">

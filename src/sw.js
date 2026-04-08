@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: 'Tarefas de Casa', body: event.data.text() };
+    data = { title: 'Homi', body: event.data.text() };
   }
 
   const options = {
@@ -24,7 +24,7 @@ self.addEventListener('push', (event) => {
     renotify: true,
   };
 
-  event.waitUntil(self.registration.showNotification(data.title || 'Tarefas de Casa', options));
+  event.waitUntil(self.registration.showNotification(data.title || 'Homi', options));
 });
 
 // ─── Notification Click Handler ────────────────────────────────

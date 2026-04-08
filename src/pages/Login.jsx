@@ -33,8 +33,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm p-6 space-y-6">
         <div className="text-center">
-          <span className="text-4xl">🏠</span>
-          <h1 className="text-2xl font-extrabold text-foreground mt-2">Tarefas de Casa</h1>
+          <h1 className="text-2xl font-extrabold text-foreground mt-2">Homi</h1>
           <p className="text-sm text-muted-foreground mt-1">Entra na tua conta</p>
         </div>
 
