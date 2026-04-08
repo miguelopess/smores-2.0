@@ -9,6 +9,17 @@ import { Label } from '@/components/ui/label';
 import { Trash2, Plus, Clock, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PEOPLE, PERSON_AVATARS, COMMON_TASKS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
+
+function formatTaskDateLabel(dateStr) {
+  const today = getLocalDateStr();
+  const tmrDate = new Date();
+  tmrDate.setDate(tmrDate.getDate() + 1);
+  const tomorrow = getLocalDateStr(tmrDate);
+  if (dateStr === today) return 'hoje';
+  if (dateStr === tomorrow) return 'amanhã';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}-${m}-${y}`;
+}
 import { format, parse } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
@@ -68,7 +79,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
       sendPushNotification({
         person,
         title: `📋 Nova tarefa: ${taskName}`,
-        body: form.end_time ? `Até às ${form.end_time} — ${form.date}` : `Para ${form.date}`,
+        body: form.end_time ? `Até às ${form.end_time} — ${formatTaskDateLabel(form.date)}` : `Para ${formatTaskDateLabel(form.date)}`,
         tag: `new-task-${person}-${form.date}`,
       });
     });

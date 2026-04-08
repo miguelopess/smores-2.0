@@ -14,7 +14,7 @@ export default defineConfig({
       injectRegister: false,
       manifest: {
         name: 'Tarefas de Casa',
-        short_name: 'Tarefas',
+        short_name: 'Smores',
         description: 'Gestão de tarefas domésticas da família',
         theme_color: '#7c3aed',
         background_color: '#0f0a1a',

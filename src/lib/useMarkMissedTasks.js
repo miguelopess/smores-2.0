@@ -54,10 +54,12 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
 
             // Notify parents about missed task (only for yesterday)
             if (daysBack === 1) {
+              const [y, mo, d] = dateStr.split('-');
+              const dateLabel = daysBack === 1 ? 'ontem' : `${d}-${mo}-${y}`;
               sendPushNotification({
                 person: '__parents__',
                 title: `❌ Tarefa não feita`,
-                body: `${person} não completou: ${scheduledTask.task_name} (${dateStr})`,
+                body: `${person} não completou: ${scheduledTask.task_name} (${dateLabel})`,
                 tag: `missed-${person}-${scheduledTask.task_name}-${dateStr}`,
               });
             }
