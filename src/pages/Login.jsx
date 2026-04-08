@@ -14,7 +14,7 @@ function useThemeColor(color) {
     const prevMeta = meta?.getAttribute('content');
     const prevBody = document.body.style.backgroundColor;
     meta?.setAttribute('content', color);
-    document.body.style.backgroundColor = '#1a5858';
+    document.body.style.backgroundColor = '#123f3f';
     return () => {
       if (prevMeta) meta?.setAttribute('content', prevMeta);
       document.body.style.backgroundColor = prevBody;
@@ -23,7 +23,7 @@ function useThemeColor(color) {
 }
 
 export default function Login() {
-  useThemeColor('#1a5858');
+  useThemeColor('#123f3f');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
