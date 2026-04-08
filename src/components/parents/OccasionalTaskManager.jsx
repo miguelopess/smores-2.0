@@ -242,6 +242,8 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-[11px] text-primary font-medium">
                     {format(parse(task.date, 'yyyy-MM-dd', new Date()), "d MMM", { locale: pt })}
+                  </span>
+                  {task.end_time && (
                     <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                       <Clock className="w-3 h-3" /> até às {task.end_time}
                     </span>
