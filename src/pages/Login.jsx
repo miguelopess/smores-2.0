@@ -11,9 +11,14 @@ const RING_OPACITIES = [0.07, 0.11, 0.15, 0.19];
 function useThemeColor(color) {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
-    const prev = meta?.getAttribute('content');
+    const prevMeta = meta?.getAttribute('content');
+    const prevBody = document.body.style.backgroundColor;
     meta?.setAttribute('content', color);
-    return () => { if (prev) meta?.setAttribute('content', prev); };
+    document.body.style.backgroundColor = color;
+    return () => {
+      if (prevMeta) meta?.setAttribute('content', prevMeta);
+      document.body.style.backgroundColor = prevBody;
+    };
   }, [color]);
 }
 
@@ -48,7 +53,11 @@ export default function Login() {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden px-4"
-      style={{ background: 'linear-gradient(145deg, #1a5858 0%, #0c2e2e 50%, #071818 100%)' }}
+      style={{
+        background: 'linear-gradient(145deg, #1a5858 0%, #0c2e2e 50%, #071818 100%)',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
       {/* Decorative concentric rings — mirrors the logo motif */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
