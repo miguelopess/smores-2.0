@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { TaskService } from '@/api/entities';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { TaskService, TaskReminderService } from '@/api/entities';
 import { uploadTaskPhoto } from '@/api/storage';
 import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,35 @@ export default function TaskCompleteModal({ task, person, onClose }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Check if a parent sent a reminder for this task today
+  const { data: reminders = [] } = useQuery({
+    queryKey: ['taskReminders', person, today],
+    queryFn: () => TaskReminderService.getByPersonAndDate(person, today),
+    enabled: !!task && !!person,
+  });
+
+  const hasReminder = task
+    ? reminders.some(r => r.task_name === task.task_name)
+    : false;
+
+  // Determine value for occasional tasks with custom reward
+  const isOccasional = task?._occasional || task?._type === 'occasional';
+  const occasionalReward = isOccasional && task?.reward != null ? Number(task.reward) : null;
+
+  // Build completion type overrides for occasional tasks with reminders
+  const getDisplayValue = (key) => {
+    if (occasionalReward != null) {
+      if (key === 'on_time_no_reminder') return occasionalReward;
+      if (key === 'on_time_with_reminder') return Math.round(occasionalReward * 50) / 100;
+      if (key === 'late') return Math.round(occasionalReward * 25) / 100;
+    }
+    return COMPLETION_TYPES[key].value;
+  };
+
+  const getActualValue = (key) => {
+    return getDisplayValue(key);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (completionType) => {
       let photo_url = '';
@@ -34,7 +63,7 @@ export default function TaskCompleteModal({ task, person, onClose }) {
         person,
         task_name: task.task_name,
         completion_type: completionType,
-        value: COMPLETION_TYPES[completionType].value,
+        value: getActualValue(completionType),
         date: today,
         week_key: getWeekKey(new Date()),
         month_key: getCurrentMonthKey(),
@@ -63,9 +92,9 @@ export default function TaskCompleteModal({ task, person, onClose }) {
     }
   };
 
-  const options = inTime
-    ? ['on_time_no_reminder', 'on_time_with_reminder']
-    : ['late'];
+  const options = hasReminder
+    ? (inTime ? ['on_time_with_reminder'] : ['late'])
+    : (inTime ? ['on_time_no_reminder', 'on_time_with_reminder'] : ['late']);
 
   return (
     <AnimatePresence>
@@ -106,6 +135,12 @@ export default function TaskCompleteModal({ task, person, onClose }) {
               </div>
             )}
 
+            {hasReminder && (
+              <div className="bg-amber-500/10 rounded-xl p-3 mb-4 text-sm text-amber-600 text-center font-medium">
+                🔔 Recebeste um lembrete dos pais — o valor desta tarefa é reduzido
+              </div>
+            )}
+
             {/* Step 1: choose completion type */}
             {!selectedType && (
               <>
@@ -113,6 +148,7 @@ export default function TaskCompleteModal({ task, person, onClose }) {
                 <div className="space-y-2">
                   {options.map(key => {
                     const ct = COMPLETION_TYPES[key];
+                    const displayVal = getDisplayValue(key);
                     return (
                       <button
                         key={key}
@@ -126,7 +162,7 @@ export default function TaskCompleteModal({ task, person, onClose }) {
                         <div className="flex-1">
                           <p className="font-semibold text-foreground">{ct.label}</p>
                         </div>
-                        <span className={`text-sm font-bold ${ct.color}`}>+€{ct.value.toFixed(2)}</span>
+                        <span className={`text-sm font-bold ${ct.color}`}>+€{displayVal.toFixed(2)}</span>
                       </button>
                     );
                   })}

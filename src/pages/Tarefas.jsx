@@ -1,0 +1,365 @@
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ScheduledTaskService, OccasionalTaskService, TaskService, TaskReminderService } from '@/api/entities';
+import { sendTaskReminder } from '@/api/pushNotifications';
+import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
+import { useAuth } from '@/lib/AuthContext';
+import { PEOPLE, PERSON_AVATARS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
+import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { format, addDays, subDays, parse, isToday } from 'date-fns';
+import { pt } from 'date-fns/locale';
+
+const DAYS_MAP_REVERSE = {
+  0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+  4: 'thursday', 5: 'friday', 6: 'saturday',
+};
+
+function isOverdue(endTime, dateStr) {
+  const today = getLocalDateStr();
+  if (dateStr < today) return true;
+  if (dateStr > today) return false;
+  if (!endTime) return false;
+  const now = new Date();
+  const [h, m] = endTime.split(':').map(Number);
+  const end = new Date();
+  end.setHours(h, m, 0);
+  return now > end;
+}
+
+export default function Tarefas() {
+  const { data: user, isLoading: loadingUser } = useCurrentUser();
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const dateStr = getLocalDateStr(selectedDate);
+  const dayKey = DAYS_MAP_REVERSE[selectedDate.getDay()];
+
+  const { data: scheduledTasks = [], isLoading: loadingSched } = useQuery({
+    queryKey: ['scheduledTasks'],
+    queryFn: () => ScheduledTaskService.list(),
+  });
+
+  const { data: occasionalTasks = [], isLoading: loadingOcc } = useQuery({
+    queryKey: ['occasionalTasks'],
+    queryFn: () => OccasionalTaskService.list('-date', 500),
+  });
+
+  const { data: completedTasks = [], isLoading: loadingTasks } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => TaskService.list('-created_date', 2000),
+  });
+
+  const { data: reminders = [], isLoading: loadingReminders } = useQuery({
+    queryKey: ['taskReminders', dateStr],
+    queryFn: () => TaskReminderService.getByDate(dateStr),
+  });
+
+  const sendReminderMutation = useMutation({
+    mutationFn: ({ person, taskName, taskType }) =>
+      sendTaskReminder({
+        person,
+        taskName,
+        taskType,
+        taskDate: dateStr,
+        sentBy: session?.user?.id,
+      }),
+    onSuccess: (_, { person, taskName }) => {
+      queryClient.invalidateQueries({ queryKey: ['taskReminders', dateStr] });
+      toast.success(`Lembrete enviado para ${person}!`);
+      setSelectedTask(null);
+    },
+    onError: (err) => {
+      if (err?.code === '23505') {
+        toast.error('Já enviaste um lembrete para esta tarefa hoje.');
+      } else {
+        toast.error('Erro ao enviar lembrete');
+      }
+    },
+  });
+
+  const tasksByPerson = useMemo(() => {
+    const result = {};
+    for (const person of PEOPLE) {
+      const scheduled = scheduledTasks
+        .filter(t => t.person === person && t.days_of_week?.includes(dayKey))
+        .map(t => ({
+          ...t,
+          _type: 'scheduled',
+          _done: completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
+          _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
+          _overdue: isOverdue(t.end_time, dateStr),
+        }));
+
+      const occasional = occasionalTasks
+        .filter(t => t.person === person && t.date === dateStr)
+        .map(t => ({
+          ...t,
+          _type: 'occasional',
+          _done: t.completed || completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
+          _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
+          _overdue: isOverdue(t.end_time, dateStr),
+        }));
+
+      result[person] = [...scheduled, ...occasional].sort((a, b) =>
+        (a.end_time || '23:59').localeCompare(b.end_time || '23:59')
+      );
+    }
+    return result;
+  }, [scheduledTasks, occasionalTasks, completedTasks, reminders, dayKey, dateStr]);
+
+  if (loadingUser || loadingSched || loadingOcc || loadingTasks || loadingReminders) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isParent(user)) {
+    return (
+      <div className="max-w-lg mx-auto px-4 pt-16 flex flex-col items-center text-center">
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
+          <Lock className="w-9 h-9 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-2">Área Restrita</h2>
+        <p className="text-sm text-muted-foreground">Este painel é apenas para os pais.</p>
+      </div>
+    );
+  }
+
+  const isTodaySelected = isToday(selectedDate);
+  const formattedDate = format(selectedDate, "EEEE, d 'de' MMMM", { locale: pt });
+
+  return (
+    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div className="flex items-center gap-2 mb-1">
+          <Bell className="w-5 h-5 text-primary" />
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Tarefas</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">Consulta e envia lembretes</p>
+      </motion.div>
+
+      {/* Date navigator */}
+      <div className="flex items-center justify-between bg-card rounded-2xl border border-border p-3 mb-6">
+        <button
+          onClick={() => setSelectedDate(d => subDays(d, 1))}
+          className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-muted transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="text-center">
+          <p className="text-sm font-bold text-foreground capitalize">{formattedDate}</p>
+          {isTodaySelected && (
+            <Badge variant="secondary" className="text-[10px] mt-0.5">Hoje</Badge>
+          )}
+        </div>
+        <button
+          onClick={() => setSelectedDate(d => addDays(d, 1))}
+          className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-muted transition-colors"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Per-person sections */}
+      {PEOPLE.map(person => {
+        const tasks = tasksByPerson[person] || [];
+        const doneCount = tasks.filter(t => t._done).length;
+
+        return (
+          <motion.div
+            key={person}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">{PERSON_AVATARS[person]}</span>
+              <h2 className="font-bold text-foreground">{person}</h2>
+              <Badge variant="outline" className="ml-auto text-xs">
+                {doneCount}/{tasks.length}
+              </Badge>
+            </div>
+
+            {tasks.length === 0 ? (
+              <Card className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">Sem tarefas para este dia</p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {tasks.map((task, idx) => (
+                  <Card
+                    key={`${task.task_name}-${idx}`}
+                    onClick={() => !task._done && setSelectedTask({ ...task, person })}
+                    className={`p-3 flex items-center gap-3 transition-all ${
+                      task._done
+                        ? 'opacity-50'
+                        : 'cursor-pointer hover:border-primary/40 active:scale-[0.98]'
+                    }`}
+                  >
+                    {/* Status icon */}
+                    {task._done ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : task._overdue ? (
+                      <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+
+                    {/* Task info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{TASK_ICONS[task.task_name] || '✅'}</span>
+                        <p className={`font-semibold text-sm truncate ${task._done ? 'line-through' : ''}`}>
+                          {task.task_name}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {task.end_time && (
+                          <span className="text-[11px] text-muted-foreground">Até {task.end_time}</span>
+                        )}
+                        {task._type === 'occasional' && (
+                          <Badge variant="secondary" className="text-[10px]">Especial</Badge>
+                        )}
+                        {task._type === 'occasional' && task.reward != null && (
+                          <span className="text-[11px] text-muted-foreground">€{Number(task.reward).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Reminder badge */}
+                    {task._reminded && (
+                      <Badge variant="destructive" className="text-[10px] flex items-center gap-1 flex-shrink-0">
+                        <BellRing className="w-3 h-3" />
+                        Lembrado
+                      </Badge>
+                    )}
+
+                    {/* Status badge */}
+                    {task._done ? (
+                      <Badge className="bg-green-500/10 text-green-600 text-[10px] flex-shrink-0">
+                        Feita
+                      </Badge>
+                    ) : task._overdue ? (
+                      <Badge variant="destructive" className="text-[10px] flex-shrink-0">
+                        Atrasada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] flex-shrink-0">
+                        Pendente
+                      </Badge>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        );
+      })}
+
+      {/* Task detail sheet / send reminder */}
+      <AnimatePresence>
+        {selectedTask && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-40"
+              onClick={() => setSelectedTask(null)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 pb-10 shadow-2xl"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{TASK_ICONS[selectedTask.task_name] || '✅'}</span>
+                  <div>
+                    <h3 className="font-bold text-lg text-foreground">{selectedTask.task_name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {PERSON_AVATARS[selectedTask.person]} {selectedTask.person}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedTask(null)} className="p-1 rounded-full hover:bg-muted">
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="space-y-3 mb-5">
+                {selectedTask.end_time && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    <span>Prazo: {selectedTask.end_time}</span>
+                  </div>
+                )}
+                {selectedTask._type === 'occasional' && selectedTask.reward != null && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>💰</span>
+                    <span>Recompensa: €{Number(selectedTask.reward).toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedTask._overdue && (
+                  <div className="bg-destructive/10 rounded-xl p-3 text-sm text-destructive text-center font-medium">
+                    ⚠️ Esta tarefa já passou do prazo
+                  </div>
+                )}
+                {selectedTask._reminded && (
+                  <div className="bg-amber-500/10 rounded-xl p-3 text-sm text-amber-600 text-center font-medium">
+                    🔔 Já enviaste um lembrete para esta tarefa
+                  </div>
+                )}
+              </div>
+
+              <button
+                disabled={selectedTask._reminded || selectedTask._done || sendReminderMutation.isPending}
+                onClick={() =>
+                  sendReminderMutation.mutate({
+                    person: selectedTask.person,
+                    taskName: selectedTask.task_name,
+                    taskType: selectedTask._type,
+                  })
+                }
+                className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {sendReminderMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    A enviar...
+                  </>
+                ) : selectedTask._reminded ? (
+                  <>
+                    <BellRing className="w-4 h-4" />
+                    Lembrete já enviado
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-4 h-4" />
+                    Enviar Lembrete
+                  </>
+                )}
+              </button>
+
+              {!selectedTask._reminded && !selectedTask._done && (
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  O valor da tarefa será reduzido para {selectedTask.person} ao concluir com lembrete
+                </p>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

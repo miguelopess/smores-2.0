@@ -17,8 +17,8 @@ export const PENALTIES = {
 
 export const PERSON_AVATARS = {
   'Inês': '👩',
-  'Pedro': '👦',
-  'Miguel': '🧑',
+  'Pedro': '🧒',
+  'Miguel': '👨',
 };
 
 export const TASK_ICONS = {

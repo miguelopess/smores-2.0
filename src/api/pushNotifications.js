@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { sendPushNotification } from './supabaseClient';
+import { TaskReminderService } from './entities';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -153,4 +155,28 @@ export async function getPushSubscriptionState() {
   } catch {
     return { supported: true, subscribed: false };
   }
+}
+
+/**
+ * Send a task reminder: creates a record in task_reminders + sends a push notification.
+ * Returns the created reminder record.
+ */
+export async function sendTaskReminder({ person, taskName, taskType, taskDate, sentBy }) {
+  const reminder = await TaskReminderService.create({
+    person,
+    task_name: taskName,
+    task_type: taskType,
+    task_date: taskDate,
+    sent_by: sentBy,
+  });
+
+  sendPushNotification({
+    person,
+    title: '⏰ Lembrete',
+    body: `${taskName} precisa de ser feita!`,
+    url: '/',
+    tag: `reminder-${person}-${taskName}-${taskDate}`,
+  });
+
+  return reminder;
 }

@@ -11,6 +11,7 @@ import RegisterTask from './pages/RegisterTask';
 import Ranking from './pages/Ranking';
 import Parents from './pages/Parents';
 import Rotinas from './pages/Rotinas';
+import Tarefas from './pages/Tarefas';
 import Login from './pages/Login';
 
 const AuthenticatedApp = () => {
@@ -40,6 +41,7 @@ const AuthenticatedApp = () => {
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/pais" element={<Parents />} />
         <Route path="/rotinas" element={<Rotinas />} />
+        <Route path="/tarefas" element={<Tarefas />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

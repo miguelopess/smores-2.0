@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell } from 'lucide-react';
+import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell, ClipboardList } from 'lucide-react';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
@@ -42,6 +42,7 @@ export default function AppLayout() {
     ...(!userIsParent ? [{ path: '/registar', icon: PlusCircle, label: 'Registar' }] : []),
     { path: '/ranking', icon: Trophy, label: 'Ranking' },
     ...(userIsParent ? [
+      { path: '/tarefas', icon: ClipboardList, label: 'Tarefas' },
       { path: '/rotinas', icon: CalendarDays, label: 'Rotinas' },
       { path: '/pais', icon: BarChart2, label: 'Relatório' },
     ] : []),

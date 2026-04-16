@@ -78,3 +78,30 @@ export const OccasionalTaskService = {
     if (error) throw error;
   },
 };
+
+export const TaskReminderService = {
+  async create(record) {
+    const { data, error } = await supabase.from('task_reminders').insert(record).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getByPersonAndDate(person, date) {
+    const { data, error } = await supabase
+      .from('task_reminders')
+      .select('*')
+      .eq('person', person)
+      .eq('task_date', date);
+    if (error) throw error;
+    return data;
+  },
+
+  async getByDate(date) {
+    const { data, error } = await supabase
+      .from('task_reminders')
+      .select('*')
+      .eq('task_date', date);
+    if (error) throw error;
+    return data;
+  },
+};

@@ -66,6 +66,8 @@ export default function Home() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+      <p className="text-sm text-muted-foreground mb-6">Semana {currentWeek.split('-')[2]} de {new Date().toLocaleString('pt-PT', { month: 'long' })} · Sistema Familiar</p>
+
       {/* Today's Schedule for logged-in child */}
       {!userIsParent && person && (
         <div className="mb-6">
@@ -103,7 +105,7 @@ export default function Home() {
       {/* Recent Activity */}
       <div className="mb-4">
         <h2 className="text-lg font-bold text-foreground mb-3">Atividade Recente</h2>
-        <RecentActivity tasks={tasks} />
+        <RecentActivity tasks={userIsParent ? tasks : tasks.filter(t => t.person === person)} />
       </div>
     </div>
   );
