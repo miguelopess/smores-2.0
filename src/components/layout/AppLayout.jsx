@@ -39,8 +39,10 @@ export default function AppLayout() {
 
   const navItems = [
     { path: '/', icon: Home, label: 'Início' },
-    ...(!userIsParent ? [{ path: '/registar', icon: PlusCircle, label: 'Registar' }] : []),
-    { path: '/ranking', icon: Trophy, label: 'Ranking' },
+    ...(!userIsParent ? [
+      { path: '/registar', icon: PlusCircle, label: 'Registar' },
+      { path: '/ranking', icon: Trophy, label: 'Ranking' },
+    ] : []),
     ...(userIsParent ? [
       { path: '/tarefas', icon: ClipboardList, label: 'Tarefas' },
       { path: '/rotinas', icon: CalendarDays, label: 'Rotinas' },

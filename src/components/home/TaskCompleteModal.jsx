@@ -94,7 +94,7 @@ export default function TaskCompleteModal({ task, person, onClose }) {
 
   const options = hasReminder
     ? (inTime ? ['on_time_with_reminder'] : ['late'])
-    : (inTime ? ['on_time_no_reminder', 'on_time_with_reminder'] : ['late']);
+    : (inTime ? ['on_time_no_reminder'] : ['late']);
 
   return (
     <AnimatePresence>

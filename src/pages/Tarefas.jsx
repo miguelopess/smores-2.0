@@ -5,7 +5,7 @@ import { sendTaskReminder } from '@/api/pushNotifications';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { PEOPLE, PERSON_AVATARS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
-import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
+import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, Clock, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -204,15 +204,6 @@ export default function Tarefas() {
                         : 'cursor-pointer hover:border-primary/40 active:scale-[0.98]'
                     }`}
                   >
-                    {/* Status icon */}
-                    {task._done ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    ) : task._overdue ? (
-                      <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-                    ) : (
-                      <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-
                     {/* Task info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
