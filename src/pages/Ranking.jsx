@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { TaskService } from '@/api/entities';
-import { PEOPLE, PERSON_AVATARS, COMPLETION_TYPES, getCurrentWeekKey, getWeekTasks, calculateEarnings, checkWeeklyBonus, WEEKLY_BONUS } from '@/lib/taskHelpers';
+import { PEOPLE, PERSON_AVATARS, COMPLETION_TYPES, getCurrentWeekKey, getCurrentMonthKey, getWeekTasks, getMonthTasks, calculateEarnings, checkWeeklyBonus, WEEKLY_BONUS } from '@/lib/taskHelpers';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { Crown, Medal, Star, TrendingUp } from 'lucide-react';
 
 export default function Ranking() {
   const currentWeek = getCurrentWeekKey();
+  const currentMonth = getCurrentMonthKey();
   
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
@@ -26,7 +27,7 @@ export default function Ranking() {
   };
 
   const weekRanking = getRanking(getWeekTasks(tasks, currentWeek));
-  const allTimeRanking = getRanking(tasks);
+  const monthRanking = getRanking(getMonthTasks(tasks, currentMonth));
 
   const medals = [
     { icon: Crown, color: 'text-yellow-500' },
@@ -102,13 +103,13 @@ export default function Ranking() {
       <Tabs defaultValue="week" className="w-full">
         <TabsList className="w-full grid grid-cols-2 mb-5 h-11 rounded-xl">
           <TabsTrigger value="week" className="rounded-lg font-semibold">Esta Semana</TabsTrigger>
-          <TabsTrigger value="all" className="rounded-lg font-semibold">Total</TabsTrigger>
+          <TabsTrigger value="month" className="rounded-lg font-semibold">Este Mês</TabsTrigger>
         </TabsList>
         <TabsContent value="week">
           <RankingList ranking={weekRanking} />
         </TabsContent>
-        <TabsContent value="all">
-          <RankingList ranking={allTimeRanking} />
+        <TabsContent value="month">
+          <RankingList ranking={monthRanking} />
         </TabsContent>
       </Tabs>
     </div>

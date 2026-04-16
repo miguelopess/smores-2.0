@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskService } from '@/api/entities';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
-import { Lock, Shield, ChevronDown, ChevronUp, Eye, Trash2, TrendingUp, Star } from 'lucide-react';
+import { Lock, Shield, ChevronDown, ChevronUp, Eye, Trash2, TrendingUp, Star, Loader2 } from 'lucide-react';
 import PhotoModal from '@/components/parents/PhotoModal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { supabase } from '@/api/supabaseClient';
 import { PEOPLE, PERSON_AVATARS, PENALTIES, COMPLETION_TYPES, getCurrentWeekKey, getCurrentMonthKey, getWeekTasks, getMonthTasks, calculateEarnings, checkWeeklyBonus, WEEKLY_BONUS, countFailures, getTaskIcon } from '@/lib/taskHelpers';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +22,7 @@ export default function Parents() {
   const currentMonth = getCurrentMonthKey();
   const [expandedPerson, setExpandedPerson] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
   const { data: user, isLoading: loadingUser } = useCurrentUser();
 
   const { data: tasks = [], isLoading } = useQuery({
@@ -34,6 +37,27 @@ export default function Parents() {
       toast.success('Tarefa removida');
     },
   });
+
+  const handleCleanup = async () => {
+    setCleanupLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('monthly-cleanup', {
+        body: {},
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['occasional-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-reminders'] });
+      toast.success(
+        `Limpeza concluída: ${data.deleted_tasks} tarefas, ${data.deleted_photos} fotos, ${data.deleted_occasional_tasks} ocasionais, ${data.deleted_reminders} lembretes apagados`
+      );
+    } catch (err) {
+      console.error('Cleanup failed:', err);
+      toast.error('Erro ao executar limpeza mensal');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
 
   const weekTasks = getWeekTasks(tasks, currentWeek);
   const monthTasks = getMonthTasks(tasks, currentMonth);
@@ -182,6 +206,36 @@ export default function Parents() {
             );
           })}
         </div>
+      </Card>
+
+      {/* Limpeza Mensal */}
+      <Card className="p-4 mt-4 mb-4">
+        <h3 className="text-sm font-bold text-foreground mb-2">🧹 Limpeza Mensal</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Apaga tarefas, fotos, lembretes e dados de meses anteriores. Rotinas e tarefas agendadas não são afetadas.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" className="w-full gap-2" disabled={cleanupLoading}>
+              {cleanupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {cleanupLoading ? 'A limpar...' : 'Executar Limpeza'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tens a certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Isto vai apagar permanentemente todas as tarefas concluídas, fotos, lembretes e notificações de meses anteriores. As rotinas e tarefas agendadas não serão afetadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleCleanup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Sim, apagar dados antigos
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </Card>
 
       {/* Histórico */}

@@ -1,13 +1,15 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PERSON_AVATARS, PENALTIES, calculateEarnings, countFailures, getLocalDateStr } from '@/lib/taskHelpers';
+import { PERSON_AVATARS, PENALTIES, calculateEarnings, countFailures, getLocalDateStr, getCurrentMonthKey } from '@/lib/taskHelpers';
 import { TrendingUp, AlertTriangle } from 'lucide-react';
 
 export default function PersonCard({ person, tasks, weekTasks, index }) {
   const personTasks = tasks.filter(t => t.person === person);
   const personWeekTasks = weekTasks.filter(t => t.person === person);
-  const totalEarnings = calculateEarnings(personTasks);
+  const currentMonth = getCurrentMonthKey();
+  const personMonthTasks = personTasks.filter(t => t.week_key && t.week_key.startsWith(currentMonth));
+  const monthEarnings = calculateEarnings(personMonthTasks);
   const weekEarnings = calculateEarnings(personWeekTasks);
   const failures = countFailures(tasks, person);
   const todayTasks = personTasks.filter(t => t.date === getLocalDateStr());
@@ -45,8 +47,8 @@ export default function PersonCard({ person, tasks, weekTasks, index }) {
             <p className="text-xl font-bold text-primary mt-0.5">€{weekEarnings.toFixed(2)}</p>
           </div>
           <div className="bg-muted rounded-xl p-3">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">€{totalEarnings.toFixed(2)}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Este mês</p>
+            <p className="text-xl font-bold text-foreground mt-0.5">€{monthEarnings.toFixed(2)}</p>
           </div>
         </div>
 
