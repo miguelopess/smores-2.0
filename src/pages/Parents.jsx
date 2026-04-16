@@ -208,11 +208,11 @@ export default function Parents() {
         </div>
       </Card>
 
-      {/* Limpeza Mensal */}
+      {/* Limpeza de Dados */}
       <Card className="p-4 mt-4 mb-4">
-        <h3 className="text-sm font-bold text-foreground mb-2">🧹 Limpeza Mensal</h3>
+        <h3 className="text-sm font-bold text-foreground mb-2">🧹 Limpeza de Dados</h3>
         <p className="text-xs text-muted-foreground mb-3">
-          Apaga tarefas, fotos, lembretes e dados de meses anteriores. Rotinas e tarefas agendadas não são afetadas.
+          Apaga todas as tarefas concluídas, fotos, lembretes e notificações. Rotinas e tarefas agendadas não são afetadas. Penalizações resetam a 0.
         </p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -225,13 +225,13 @@ export default function Parents() {
             <AlertDialogHeader>
               <AlertDialogTitle>Tens a certeza?</AlertDialogTitle>
               <AlertDialogDescription>
-                Isto vai apagar permanentemente todas as tarefas concluídas, fotos, lembretes e notificações de meses anteriores. As rotinas e tarefas agendadas não serão afetadas.
+                Isto vai apagar permanentemente todas as tarefas, fotos, lembretes e notificações. As rotinas e tarefas agendadas não serão afetadas. As penalizações voltam a 0.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={handleCleanup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Sim, apagar dados antigos
+                Sim, apagar tudo
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
