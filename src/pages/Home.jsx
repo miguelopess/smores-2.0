@@ -9,7 +9,7 @@ import TodaySchedule from '@/components/home/TodaySchedule';
 import { useNotifications } from '@/lib/useNotifications';
 import { useMarkMissedTasks } from '@/lib/useMarkMissedTasks';
 import { motion } from 'framer-motion';
-import { Sparkles, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export default function Home() {
   const currentWeek = getCurrentWeekKey();
@@ -66,15 +66,6 @@ export default function Home() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-5 h-5 text-accent" />
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Homi</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">Semana {currentWeek.split('-')[2]} de {new Date().toLocaleString('pt-PT', { month: 'long' })} · Sistema Familiar</p>
-      </motion.div>
-
       {/* Today's Schedule for logged-in child */}
       {!userIsParent && person && (
         <div className="mb-6">

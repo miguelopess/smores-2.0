@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { OccasionalTaskService } from '@/api/entities';
+import { OccasionalTaskService, TaskService } from '@/api/entities';
 import { Clock, CheckCircle2, Circle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
+import { TASK_ICONS, getLocalDateStr, getWeekKey, getCurrentMonthKey } from '@/lib/taskHelpers';
 import TaskCompleteModal from './TaskCompleteModal';
 
 const DAYS_MAP = {
@@ -47,16 +47,32 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
 
   const todaySchedule = scheduledTasks
     .filter(t => t.person === person && t.days_of_week?.includes(todayKey))
-    .filter(t => isTaskDone(t, todayTasks) || !isOverdue(t.end_time))
     .sort((a, b) => (a.start_time || '00:00').localeCompare(b.start_time || '00:00'));
 
   const todayOccasional = occasionalTasks
-    .filter(t => t.person === person && t.date === today && !t.completed && !isOverdue(t.end_time))
+    .filter(t => t.person === person && t.date === today && !t.completed)
     .sort((a, b) => (a.end_time || '99:99').localeCompare(b.end_time || '99:99'));
 
   const markOccasionalDone = useMutation({
-    mutationFn: (id) => OccasionalTaskService.update(id, { completed: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] }),
+    mutationFn: async (task) => {
+      await OccasionalTaskService.update(task.id, { completed: true });
+      if (task.reward && task.reward > 0) {
+        await TaskService.create({
+          person: task.person,
+          task_name: task.task_name,
+          completion_type: 'on_time_no_reminder',
+          value: task.reward,
+          date: today,
+          week_key: getWeekKey(new Date()),
+          month_key: getCurrentMonthKey(),
+          photo_url: '',
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 
   const totalAll = todaySchedule.length + todayOccasional.length;
@@ -195,11 +211,14 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
                 {selectedOccasional.notes && (
                   <p className="text-xs text-muted-foreground">{selectedOccasional.notes}</p>
                 )}
+                {selectedOccasional.reward > 0 && (
+                  <p className="text-sm font-bold text-primary mt-1">🎁 Recompensa: +€{Number(selectedOccasional.reward).toFixed(2)}</p>
+                )}
               </div>
             </div>
             <button
               disabled={markOccasionalDone.isPending}
-              onClick={() => { markOccasionalDone.mutate(selectedOccasional.id); setSelectedOccasional(null); }}
+              onClick={() => { markOccasionalDone.mutate(selectedOccasional); setSelectedOccasional(null); }}
               className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50"
             >
               ✅ Marcar como concluída

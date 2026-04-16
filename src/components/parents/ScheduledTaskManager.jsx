@@ -27,7 +27,15 @@ const DAYS_FULL = {
 
 export default function ScheduledTaskManager({ scheduledTasks }) {
   const queryClient = useQueryClient();
-  const [selectedPerson, setSelectedPerson] = useState(PEOPLE[0]);
+  const [selectedPersons, setSelectedPersons] = useState([PEOPLE[0]]);
+  const [viewPerson, setViewPerson] = useState(PEOPLE[0]);
+
+  const togglePerson = (p) => {
+    setSelectedPersons(prev =>
+      prev.includes(p) ? (prev.length > 1 ? prev.filter(x => x !== p) : prev) : [...prev, p]
+    );
+  };
+
   const [form, setForm] = useState({
     task_name: '',
     custom_task: '',
@@ -69,39 +77,47 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
       toast.error('Preenche a tarefa e seleciona pelo menos um dia!');
       return;
     }
-    createMutation.mutate({
-      person: selectedPerson,
-      task_name: taskName,
-      days_of_week: form.days_of_week,
-      start_time: null,
-      end_time: form.end_time || null,
+    selectedPersons.forEach(person => {
+      createMutation.mutate({
+        person,
+        task_name: taskName,
+        days_of_week: form.days_of_week,
+        start_time: null,
+        end_time: form.end_time || null,
+      });
     });
   };
 
-  const personSchedule = scheduledTasks.filter(t => t.person === selectedPerson);
+  const personSchedule = scheduledTasks.filter(t => t.person === viewPerson);
 
   return (
     <div className="space-y-4">
-      {/* Person selector */}
-      <div className="flex gap-2">
-        {PEOPLE.map(p => (
-          <button
-            key={p}
-            onClick={() => setSelectedPerson(p)}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border-2 transition-all ${
-              selectedPerson === p ? 'border-primary bg-primary/5' : 'border-border'
-            }`}
-          >
-            <span className="text-xl">{PERSON_AVATARS[p]}</span>
-            <span className="text-xs font-semibold">{p}</span>
-          </button>
-        ))}
+      {/* Person selector for assigning */}
+      <div className="mb-1">
+        <p className="text-xs text-muted-foreground mb-1.5 font-medium">Atribuir a:</p>
+        <div className="flex gap-2">
+          {PEOPLE.map(p => (
+            <button
+              key={p}
+              onClick={() => togglePerson(p)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border-2 transition-all ${
+                selectedPersons.includes(p) ? 'border-primary bg-primary/5' : 'border-border opacity-50'
+              }`}
+            >
+              <span className="text-xl">{PERSON_AVATARS[p]}</span>
+              <span className="text-xs font-semibold">{p}</span>
+            </button>
+          ))}
+        </div>
+        {selectedPersons.length > 1 && (
+          <p className="text-xs text-primary font-medium mt-1.5 text-center">A tarefa será criada para {selectedPersons.join(', ')}</p>
+        )}
       </div>
 
       {/* Add form */}
       <Card className="p-4 space-y-3">
         <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Nova tarefa diária para {selectedPerson}
+          <Plus className="w-4 h-4" /> Nova tarefa diária para {selectedPersons.join(', ')}
         </h4>
 
         {/* Task name */}
@@ -195,10 +211,29 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
         </Button>
       </Card>
 
+      {/* View selector */}
+      <div>
+        <p className="text-xs text-muted-foreground mb-1.5 font-medium">Ver rotina de:</p>
+        <div className="flex gap-2">
+          {PEOPLE.map(p => (
+            <button
+              key={p}
+              onClick={() => setViewPerson(p)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border-2 transition-all ${
+                viewPerson === p ? 'border-primary bg-primary/5' : 'border-border opacity-50'
+              }`}
+            >
+              <span className="text-xl">{PERSON_AVATARS[p]}</span>
+              <span className="text-xs font-semibold">{p}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Existing schedule */}
       <div className="space-y-2">
         <h4 className="text-sm font-bold text-foreground">
-          📅 Rotina de {selectedPerson} ({personSchedule.length} tarefas)
+          📅 Rotina de {viewPerson} ({personSchedule.length} tarefas)
         </h4>
         {personSchedule.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">Sem tarefas diárias definidas</p>

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Clock, Calendar, CheckCircle2, Circle } from 'lucide-react';
+import { Trash2, Plus, Clock, Calendar, CheckCircle2, Circle, Euro } from 'lucide-react';
 import { toast } from 'sonner';
 import { PEOPLE, PERSON_AVATARS, COMMON_TASKS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
 
@@ -38,6 +38,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
     date: getLocalDateStr(),
     end_time: '',
     notes: '',
+    reward: '',
   });
   const [showCustom, setShowCustom] = useState(false);
 
@@ -45,7 +46,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
     mutationFn: (data) => OccasionalTaskService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
-      setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '' });
+      setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '', reward: '' });
       setShowCustom(false);
       toast.success('Tarefa ocasional criada!');
     },
@@ -72,6 +73,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
         date: form.date,
         end_time: form.end_time || null,
         notes: form.notes || null,
+        reward: form.reward ? parseFloat(form.reward) : 0,
         completed: false,
       });
 
@@ -83,7 +85,7 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
         tag: `new-task-${person}-${form.date}`,
       });
     });
-    setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '' });
+    setForm({ task_name: '', custom_task: '', date: getLocalDateStr(), end_time: '', notes: '', reward: '' });
     setShowCustom(false);
   };
 
@@ -198,6 +200,36 @@ export default function OccasionalTaskManager({ occasionalTasks }) {
             value={form.end_time}
             onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
             className="h-10 rounded-xl"
+          />
+        </div>
+
+        {/* Reward */}
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block flex items-center gap-1">
+            <Euro className="w-3 h-3" /> Recompensa (€)
+          </Label>
+          <div className="flex gap-1.5">
+            {[0.25, 0.50, 1.00, 1.50, 2.00].map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, reward: String(v) }))}
+                className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${
+                  parseFloat(form.reward) === v ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
+                }`}
+              >
+                €{v.toFixed(2)}
+              </button>
+            ))}
+          </div>
+          <Input
+            type="number"
+            min="0"
+            step="0.25"
+            className="mt-2 h-10 rounded-xl"
+            placeholder="Outro valor..."
+            value={form.reward}
+            onChange={e => setForm(f => ({ ...f, reward: e.target.value }))}
           />
         </div>
 

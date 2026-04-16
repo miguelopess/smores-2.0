@@ -93,7 +93,7 @@ export function getPendingTasks(scheduledTasks, todayTasks, person, occasionalTa
   const pendingOccasional = occasionalTasks.filter((task) => {
     if (task.person !== person) return false;
     if (task.completed) return false;
-    return task.date <= today; // today or overdue
+    return task.date === today; // only today, not overdue
   });
 
   return [...pendingScheduled, ...pendingOccasional.map(t => ({ ...t, _occasional: true }))];
