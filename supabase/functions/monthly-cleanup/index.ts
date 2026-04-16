@@ -18,7 +18,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Cutoff = 1st of current month (delete everything before this date)
+    // Parse body to check for clean_all mode (manual button)
+    let cleanAll = false;
+    try {
+      const body = await req.json();
+      cleanAll = body?.clean_all === true;
+    } catch {
+      // No body or invalid JSON — default to automatic mode
+    }
+
+    // Automatic mode: cutoff = 1st of current month
+    // Manual mode (clean_all): no cutoff, delete everything
     const now = new Date();
     const ptFormatter = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Europe/Lisbon",
@@ -31,11 +41,13 @@ Deno.serve(async (req) => {
       parts.find((p) => p.type === type)?.value || "";
     const year = get("year");
     const month = get("month");
-    const cutoffDate = `${year}-${month}-01`;
+    const cutoffDate = cleanAll ? "9999-12-31" : `${year}-${month}-01`;
+    const mode = cleanAll ? "manual (all)" : "automatic";
 
-    console.log(`[monthly-cleanup] Cutoff date: ${cutoffDate}`);
+    console.log(`[monthly-cleanup] Mode: ${mode}, Cutoff date: ${cutoffDate}`);
 
     const summary = {
+      mode,
       cutoff_date: cutoffDate,
       deleted_tasks: 0,
       deleted_photos: 0,
@@ -44,7 +56,7 @@ Deno.serve(async (req) => {
       deleted_notifications: 0,
     };
 
-    // 1. Fetch old tasks (to get photo URLs before deleting)
+    // 1. Fetch tasks to delete (to get photo URLs before deleting)
     const { data: oldTasks, error: fetchErr } = await supabase
       .from("tasks")
       .select("id, photo_url")
@@ -62,8 +74,6 @@ Deno.serve(async (req) => {
         .filter((url): url is string => !!url);
 
       if (photoUrls.length > 0) {
-        // Extract file paths from public URLs
-        // URL format: https://<project>.supabase.co/storage/v1/object/public/task-photos/<filename>
         const filePaths = photoUrls
           .map((url) => {
             const marker = "/task-photos/";
@@ -73,7 +83,6 @@ Deno.serve(async (req) => {
           })
           .filter((p): p is string => !!p);
 
-        // Delete in batches of 100
         for (let i = 0; i < filePaths.length; i += 100) {
           const batch = filePaths.slice(i, i + 100);
           const { error: storageErr } = await supabase.storage
@@ -88,7 +97,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 3. Delete old tasks
+      // 3. Delete tasks
       const { error: deleteTasksErr, count } = await supabase
         .from("tasks")
         .delete({ count: "exact" })
@@ -101,7 +110,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Delete old occasional tasks (completed OR past date)
+    // 4. Delete occasional tasks (completed OR past date)
     const { error: deleteOccErr, count: occCount } = await supabase
       .from("occasional_tasks")
       .delete({ count: "exact" })
@@ -113,7 +122,7 @@ Deno.serve(async (req) => {
       summary.deleted_occasional_tasks = occCount || 0;
     }
 
-    // 5. Delete old task reminders
+    // 5. Delete task reminders
     const { error: deleteRemErr, count: remCount } = await supabase
       .from("task_reminders")
       .delete({ count: "exact" })
@@ -125,7 +134,7 @@ Deno.serve(async (req) => {
       summary.deleted_reminders = remCount || 0;
     }
 
-    // 6. Delete old sent push notifications
+    // 6. Delete sent push notifications
     const { error: deleteNotifErr, count: notifCount } = await supabase
       .from("sent_push_notifications")
       .delete({ count: "exact" })

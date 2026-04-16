@@ -42,7 +42,7 @@ export default function Parents() {
     setCleanupLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('monthly-cleanup', {
-        body: {},
+        body: { clean_all: true },
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
