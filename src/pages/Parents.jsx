@@ -45,15 +45,25 @@ export default function Parents() {
         body: { clean_all: true },
       });
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['occasional-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-reminders'] });
-      toast.success(
-        `Limpeza concluída: ${data.deleted_tasks} tarefas, ${data.deleted_photos} fotos, ${data.deleted_occasional_tasks} ocasionais, ${data.deleted_reminders} lembretes apagados`
-      );
+
+      const total = (data.deleted_tasks || 0) + (data.deleted_photos || 0) +
+        (data.deleted_occasional_tasks || 0) + (data.deleted_reminders || 0) +
+        (data.deleted_notifications || 0);
+
+      if (total === 0) {
+        toast.warning('Nenhum dado foi apagado. Verifica se a Edge Function foi atualizada no Supabase.');
+      } else {
+        // Clear local cache immediately to reflect the cleanup
+        queryClient.resetQueries({ queryKey: ['tasks'] });
+        queryClient.resetQueries({ queryKey: ['occasional-tasks'] });
+        queryClient.resetQueries({ queryKey: ['task-reminders'] });
+        toast.success(
+          `Limpeza concluída: ${data.deleted_tasks} tarefas, ${data.deleted_photos} fotos, ${data.deleted_occasional_tasks} ocasionais, ${data.deleted_reminders} lembretes apagados`
+        );
+      }
     } catch (err) {
       console.error('Cleanup failed:', err);
-      toast.error('Erro ao executar limpeza mensal');
+      toast.error('Erro ao executar limpeza');
     } finally {
       setCleanupLoading(false);
     }
