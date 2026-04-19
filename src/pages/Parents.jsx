@@ -53,6 +53,8 @@ export default function Parents() {
       if (total === 0) {
         toast.warning('Nenhum dado foi apagado. Verifica se a Edge Function foi atualizada no Supabase.');
       } else {
+        // Save cleanup date so useMarkMissedTasks won't recreate old tasks
+        localStorage.setItem('last_cleanup_date', new Date().toISOString().split('T')[0]);
         // Clear local cache immediately to reflect the cleanup
         queryClient.resetQueries({ queryKey: ['tasks'] });
         queryClient.resetQueries({ queryKey: ['occasional-tasks'] });

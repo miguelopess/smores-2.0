@@ -23,10 +23,17 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      // Don't recreate tasks that were cleaned up
+      const lastCleanup = localStorage.getItem('last_cleanup_date');
+
       for (let daysBack = 1; daysBack <= 7; daysBack++) {
         const date = new Date(today);
         date.setDate(today.getDate() - daysBack);
         const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+        // Skip days that fall before or on the last cleanup date
+        if (lastCleanup && dateStr <= lastCleanup) continue;
+
         const dayKey = DAY_KEYS[date.getDay()];
 
         const myTasksForDay = scheduledTasks.filter(
