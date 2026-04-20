@@ -354,7 +354,7 @@ export default function Tarefas() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 pb-10 shadow-2xl"
+              className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 pb-12 shadow-2xl max-h-[85vh] overflow-y-auto"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -388,11 +388,6 @@ export default function Tarefas() {
                   <div className="bg-amber-500/10 rounded-xl p-3 text-sm text-amber-600 text-center font-medium">
                     ✅ Já foi dado mais tempo para esta tarefa
                     {selectedTask._extension?.with_reminder && ' (com lembrete)'}
-                  </div>
-                )}
-                {!selectedTask._extended && selectedTask._overdue && (
-                  <div className="bg-destructive/10 rounded-xl p-3 text-sm text-destructive text-center font-medium">
-                    ⚠️ Esta tarefa já passou do prazo
                   </div>
                 )}
                 {selectedTask._reminded && (
