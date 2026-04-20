@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { TaskService, TaskDelegationService } from '@/api/entities';
+import { TaskService, TaskDelegationService, CleanupLogService } from '@/api/entities';
 import { sendPushNotification } from '@/api/supabaseClient';
 import { getWeekKey, getCurrentMonthKey } from './taskHelpers';
 
@@ -23,8 +23,13 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Don't recreate tasks that were cleaned up
-      const lastCleanup = localStorage.getItem('last_cleanup_date');
+      // Fetch the last cleanup date from Supabase (shared across all devices)
+      let lastCleanup = null;
+      try {
+        lastCleanup = await CleanupLogService.getLastCleanupDate();
+      } catch (e) {
+        // If table doesn't exist yet, continue without
+      }
 
       // Fetch all delegations to check if tasks were delegated away
       let delegations = [];

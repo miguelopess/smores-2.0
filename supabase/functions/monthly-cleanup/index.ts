@@ -146,6 +146,10 @@ Deno.serve(async (req) => {
       summary.deleted_notifications = notifCount || 0;
     }
 
+    // 7. Log the cleanup date so all devices know the boundary
+    const todayPt = `${year}-${month}-${get("day")}`;
+    await supabase.from("cleanup_log").insert({ cleaned_at: todayPt });
+
     console.log("[monthly-cleanup] Summary:", JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), {

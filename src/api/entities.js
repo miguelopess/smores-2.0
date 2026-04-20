@@ -150,3 +150,16 @@ export const TaskDelegationService = {
     if (error) throw error;
   },
 };
+
+export const CleanupLogService = {
+  async getLastCleanupDate() {
+    const { data, error } = await supabase
+      .from('cleanup_log')
+      .select('cleaned_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.cleaned_at || null;
+  },
+};
