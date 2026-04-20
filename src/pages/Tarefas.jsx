@@ -171,6 +171,12 @@ export default function Tarefas() {
             _overdue: extension ? false : overdue,
             _extended: !!extension,
             _extension: extension || null,
+            _delegation: delegation || null,
+          };
+        });
+
+      result[person] = [...scheduled, ...occasional].sort((a, b) =>
+        (a.end_time || '23:59').localeCompare(b.end_time || '23:59')
       );
     }
     return result;
