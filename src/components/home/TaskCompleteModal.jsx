@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { TaskService, TaskReminderService } from '@/api/entities';
 import { uploadTaskPhoto } from '@/api/storage';
-import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
+import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS, PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,6 +34,10 @@ export default function TaskCompleteModal({ task, person, onClose }) {
   const hasReminder = task
     ? reminders.some(r => r.task_name === task.task_name)
     : false;
+
+  // Delegation info
+  const isDelegated = task?._delegated;
+  const delegatedFrom = task?._from;
 
   // Determine value for occasional tasks with custom reward
   const isOccasional = task?._occasional || task?._type === 'occasional';
@@ -138,6 +142,12 @@ export default function TaskCompleteModal({ task, person, onClose }) {
             {hasReminder && (
               <div className="bg-amber-500/10 rounded-xl p-3 mb-4 text-sm text-amber-600 text-center font-medium">
                 🔔 Recebeste um lembrete dos pais — o valor desta tarefa é reduzido
+              </div>
+            )}
+
+            {isDelegated && (
+              <div className="bg-blue-500/10 rounded-xl p-3 mb-4 text-sm text-blue-600 text-center font-medium">
+                📥 Tarefa delegada por {PERSON_AVATARS[delegatedFrom]} {delegatedFrom} — a recompensa é tua!
               </div>
             )}
 

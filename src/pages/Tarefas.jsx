@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ScheduledTaskService, OccasionalTaskService, TaskService, TaskReminderService } from '@/api/entities';
+import { ScheduledTaskService, OccasionalTaskService, TaskService, TaskReminderService, TaskDelegationService } from '@/api/entities';
 import { sendTaskReminder } from '@/api/pushNotifications';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { PEOPLE, PERSON_AVATARS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
-import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, Clock, X } from 'lucide-react';
+import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, Clock, X, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,6 +60,13 @@ export default function Tarefas() {
     queryFn: () => TaskReminderService.getByDate(dateStr),
   });
 
+  const { data: delegations = [], isLoading: loadingDelegations } = useQuery({
+    queryKey: ['taskDelegations'],
+    queryFn: () => TaskDelegationService.list('-created_at'),
+  });
+
+  const todayDelegations = delegations.filter(d => d.task_date === dateStr);
+
   const sendReminderMutation = useMutation({
     mutationFn: ({ person, taskName, taskType }) =>
       sendTaskReminder({
@@ -88,32 +95,44 @@ export default function Tarefas() {
     for (const person of PEOPLE) {
       const scheduled = scheduledTasks
         .filter(t => t.person === person && t.days_of_week?.includes(dayKey))
-        .map(t => ({
-          ...t,
-          _type: 'scheduled',
-          _done: completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
-          _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
-          _overdue: isOverdue(t.end_time, dateStr),
-        }));
+        .map(t => {
+          const delegation = todayDelegations.find(
+            d => d.task_type === 'scheduled' && d.scheduled_task_id === t.id && d.from_person === person
+          );
+          return {
+            ...t,
+            _type: 'scheduled',
+            _done: completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
+            _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
+            _overdue: isOverdue(t.end_time, dateStr),
+            _delegation: delegation || null,
+          };
+        });
 
       const occasional = occasionalTasks
         .filter(t => t.person === person && t.date === dateStr)
-        .map(t => ({
-          ...t,
-          _type: 'occasional',
-          _done: t.completed || completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
-          _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
-          _overdue: isOverdue(t.end_time, dateStr),
-        }));
+        .map(t => {
+          const delegation = todayDelegations.find(
+            d => d.task_type === 'occasional' && d.occasional_task_id === t.id && d.from_person === person
+          );
+          return {
+            ...t,
+            _type: 'occasional',
+            _done: t.completed || completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
+            _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
+            _overdue: isOverdue(t.end_time, dateStr),
+            _delegation: delegation || null,
+          };
+        });
 
       result[person] = [...scheduled, ...occasional].sort((a, b) =>
         (a.end_time || '23:59').localeCompare(b.end_time || '23:59')
       );
     }
     return result;
-  }, [scheduledTasks, occasionalTasks, completedTasks, reminders, dayKey, dateStr]);
+  }, [scheduledTasks, occasionalTasks, completedTasks, reminders, todayDelegations, dayKey, dateStr]);
 
-  if (loadingUser || loadingSched || loadingOcc || loadingTasks || loadingReminders) {
+  if (loadingUser || loadingSched || loadingOcc || loadingTasks || loadingReminders || loadingDelegations) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -224,6 +243,16 @@ export default function Tarefas() {
                         )}
                       </div>
                     </div>
+
+                    {/* Delegation badge */}
+                    {task._delegation && (
+                      <Badge className="bg-blue-500/10 text-blue-600 text-[10px] flex items-center gap-1 flex-shrink-0 border-0">
+                        <ArrowRightLeft className="w-3 h-3" />
+                        {task._delegation.status === 'accepted'
+                          ? `→ ${task._delegation.to_person}`
+                          : 'Pendente'}
+                      </Badge>
+                    )}
 
                     {/* Reminder badge */}
                     {task._reminded && (

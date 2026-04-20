@@ -100,6 +100,27 @@ Deno.serve(async (req) => {
 
     console.log(`Checking reminders: ${todayStr} ${currentHour}:${currentMinute} (${todayKey})`);
 
+    // 0. Expire pending delegations from past days
+    const { data: expiredDelegations } = await supabase
+      .from("task_delegations")
+      .update({ status: "expired" })
+      .eq("status", "pending")
+      .lt("task_date", todayStr)
+      .select("id");
+
+    if (expiredDelegations && expiredDelegations.length > 0) {
+      console.log(`Expired ${expiredDelegations.length} pending delegations from past days`);
+    }
+
+    // 0b. Fetch today's accepted delegations to redirect reminders
+    const { data: todayDelegations } = await supabase
+      .from("task_delegations")
+      .select("*")
+      .eq("task_date", todayStr)
+      .eq("status", "accepted");
+
+    const acceptedDelegations = todayDelegations || [];
+
     // 1. Get all scheduled tasks for today's day of week
     const { data: scheduledTasks } = await supabase
       .from("scheduled_tasks")
@@ -130,6 +151,15 @@ Deno.serve(async (req) => {
       if (!task.end_time || !task.person) continue;
       if (completedSet.has(`${task.person}:${task.task_name}`)) continue;
 
+      // Check if this task was delegated to someone else
+      const delegation = acceptedDelegations.find(
+        d => d.task_type === "scheduled" && d.scheduled_task_id === task.id && d.from_person === task.person
+      );
+      // If delegated and accepted, send reminder to the accepting person instead
+      const targetPerson = delegation ? delegation.to_person : task.person;
+      // Also skip if the accepting person already completed it
+      if (delegation && completedSet.has(`${targetPerson}:${task.task_name}`)) continue;
+
       const [h, m] = task.end_time.split(":").map(Number);
       const deadlineMinutes = h * 60 + m;
       const minutesUntilDeadline = deadlineMinutes - currentTotalMinutes;
@@ -141,14 +171,14 @@ Deno.serve(async (req) => {
           const { data: subs } = await supabase
             .from("push_subscriptions")
             .select("*")
-            .eq("person", task.person);
+            .eq("person", targetPerson);
 
           if (subs && subs.length > 0) {
             const result = await sendPushToSubscriptions(
               subs,
               JSON.stringify({
                 title: `⏰ Lembra-te: ${task.task_name}`,
-                body: `Tens 15 minutos para completar esta tarefa!`,
+                body: `Tens 15 minutos para completar esta tarefa!${delegation ? ` (delegada por ${task.person})` : ""}`,
                 url: "/",
                 tag: `reminder-${task.id}`,
               })
@@ -165,14 +195,14 @@ Deno.serve(async (req) => {
           const { data: subs } = await supabase
             .from("push_subscriptions")
             .select("*")
-            .eq("person", task.person);
+            .eq("person", targetPerson);
 
           if (subs && subs.length > 0) {
             const result = await sendPushToSubscriptions(
               subs,
               JSON.stringify({
                 title: `⚠️ Prazo: ${task.task_name}`,
-                body: `O prazo para esta tarefa terminou!`,
+                body: `O prazo para esta tarefa terminou!${delegation ? ` (delegada por ${task.person})` : ""}`,
                 url: "/",
                 tag: `deadline-${task.id}`,
               })
@@ -187,6 +217,12 @@ Deno.serve(async (req) => {
     for (const task of occasionalTasks || []) {
       if (!task.end_time || !task.person) continue;
 
+      // Check if this task was delegated to someone else
+      const delegation = acceptedDelegations.find(
+        d => d.task_type === "occasional" && d.occasional_task_id === task.id && d.from_person === task.person
+      );
+      const targetPerson = delegation ? delegation.to_person : task.person;
+
       const [h, m] = task.end_time.split(":").map(Number);
       const deadlineMinutes = h * 60 + m;
       const minutesUntilDeadline = deadlineMinutes - currentTotalMinutes;
@@ -198,7 +234,7 @@ Deno.serve(async (req) => {
           const { data: subs } = await supabase
             .from("push_subscriptions")
             .select("*")
-            .eq("person", task.person);
+            .eq("person", targetPerson);
 
           if (subs && subs.length > 0) {
             const result = await sendPushToSubscriptions(
@@ -222,7 +258,7 @@ Deno.serve(async (req) => {
           const { data: subs } = await supabase
             .from("push_subscriptions")
             .select("*")
-            .eq("person", task.person);
+            .eq("person", targetPerson);
 
           if (subs && subs.length > 0) {
             const result = await sendPushToSubscriptions(

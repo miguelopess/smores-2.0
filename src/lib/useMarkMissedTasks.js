@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { TaskService } from '@/api/entities';
+import { TaskService, TaskDelegationService } from '@/api/entities';
 import { sendPushNotification } from '@/api/supabaseClient';
 import { getWeekKey, getCurrentMonthKey } from './taskHelpers';
 
@@ -26,6 +26,14 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
       // Don't recreate tasks that were cleaned up
       const lastCleanup = localStorage.getItem('last_cleanup_date');
 
+      // Fetch all delegations to check if tasks were delegated away
+      let delegations = [];
+      try {
+        delegations = await TaskDelegationService.list();
+      } catch (e) {
+        // If table doesn't exist yet, continue without
+      }
+
       for (let daysBack = 1; daysBack <= 7; daysBack++) {
         const date = new Date(today);
         date.setDate(today.getDate() - daysBack);
@@ -44,6 +52,16 @@ export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
         );
 
         for (const scheduledTask of myTasksForDay) {
+          // Skip tasks that were delegated away (accepted by someone else)
+          const wasDelegated = delegations.some(
+            d => d.task_type === 'scheduled' &&
+                 d.scheduled_task_id === scheduledTask.id &&
+                 d.task_date === dateStr &&
+                 d.from_person === person &&
+                 d.status === 'accepted'
+          );
+          if (wasDelegated) continue;
+
           const alreadyRecorded = tasks.some(
             t => t.person === person && t.task_name === scheduledTask.task_name && t.date === dateStr
           );

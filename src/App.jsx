@@ -12,6 +12,7 @@ import Ranking from './pages/Ranking';
 import Parents from './pages/Parents';
 import Rotinas from './pages/Rotinas';
 import Tarefas from './pages/Tarefas';
+import Delegar from './pages/Delegar';
 import Login from './pages/Login';
 
 const AuthenticatedApp = () => {
@@ -42,6 +43,7 @@ const AuthenticatedApp = () => {
         <Route path="/pais" element={<Parents />} />
         <Route path="/rotinas" element={<Rotinas />} />
         <Route path="/tarefas" element={<Tarefas />} />
+        <Route path="/delegar" element={<Delegar />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

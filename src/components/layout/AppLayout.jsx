@@ -1,8 +1,8 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell, ClipboardList } from 'lucide-react';
+import { Home, PlusCircle, Trophy, Shield, LogOut, CalendarDays, BarChart2, Bell, ClipboardList, Handshake } from 'lucide-react';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
-import { TaskService, ScheduledTaskService, OccasionalTaskService } from '@/api/entities';
+import { TaskService, ScheduledTaskService, OccasionalTaskService, TaskDelegationService } from '@/api/entities';
 import { PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import { useQuery } from '@tanstack/react-query';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -37,10 +37,21 @@ export default function AppLayout() {
   const today = getLocalDateStr();
   const todayTasks = tasks.filter(t => t.date === today && t.person === person);
 
+  const { data: delegations = [] } = useQuery({
+    queryKey: ['taskDelegations'],
+    queryFn: () => TaskDelegationService.list('-created_at'),
+    enabled: !userIsParent && !!person,
+  });
+
+  const pendingIncomingCount = delegations.filter(
+    d => d.status === 'pending' && d.from_person !== person && d.task_date >= today
+  ).length;
+
   const navItems = [
     { path: '/', icon: Home, label: 'Início' },
     ...(!userIsParent ? [
       { path: '/registar', icon: PlusCircle, label: 'Registar' },
+      { path: '/delegar', icon: Handshake, label: 'Delegar', badge: pendingIncomingCount },
       { path: '/ranking', icon: Trophy, label: 'Ranking' },
     ] : []),
     ...(userIsParent ? [
@@ -106,19 +117,24 @@ export default function AppLayout() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-sm border-t border-border z-50">
         <div className="max-w-lg mx-auto flex justify-around items-center h-16 px-2">
-          {navItems.map(({ path, icon: Icon, label }) => {
+          {navItems.map(({ path, icon: Icon, label, badge }) => {
             const isActive = location.pathname === path;
             return (
               <Link
                 key={path}
                 to={path}
-                className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all duration-200 ${
+                className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all duration-200 relative ${
                   isActive
                     ? 'text-primary scale-105'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
+                {badge > 0 && (
+                  <span className="absolute -top-0.5 right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                    {badge}
+                  </span>
+                )}
                 <span className={`text-[10px] font-medium ${isActive ? 'font-semibold' : ''}`}>
                   {label}
                 </span>

@@ -105,3 +105,48 @@ export const TaskReminderService = {
     return data;
   },
 };
+
+export const TaskDelegationService = {
+  async list(sortField, limit) {
+    let query = supabase.from('task_delegations').select('*');
+    const sort = parseSort(sortField);
+    if (sort) query = query.order(sort.column, { ascending: sort.ascending });
+    if (limit) query = query.limit(limit);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
+
+  async create(record) {
+    const { data, error } = await supabase.from('task_delegations').insert(record).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async accept(id, toPerson) {
+    // Only accept if still pending (race condition guard)
+    const { data, error } = await supabase
+      .from('task_delegations')
+      .update({ to_person: toPerson, status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('status', 'pending')
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getByDate(date) {
+    const { data, error } = await supabase
+      .from('task_delegations')
+      .select('*')
+      .eq('task_date', date);
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('task_delegations').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
