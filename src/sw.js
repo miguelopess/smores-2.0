@@ -1,4 +1,9 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { clientsClaim } from 'workbox-core';
+
+// Ativa o novo SW imediatamente, sem esperar que fechem a app
+self.skipWaiting();
+clientsClaim();
 
 // Precache app shell (workbox injects the manifest here)
 precacheAndRoute(self.__WB_MANIFEST);

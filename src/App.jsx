@@ -14,9 +14,11 @@ import Rotinas from './pages/Rotinas';
 import Tarefas from './pages/Tarefas';
 import Delegar from './pages/Delegar';
 import Login from './pages/Login';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
+  useRealtimeSync();
 
   if (isLoadingAuth) {
     return (

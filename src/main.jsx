@@ -9,4 +9,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 )
 
 // Register service worker for PWA + push notifications
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  onRegisteredSW(_swUrl, registration) {
+    if (registration) {
+      // Verifica atualizações a cada 60 minutos
+      setInterval(() => {
+        registration.update();
+      }, 60 * 60 * 1000);
+    }
+  },
+})
