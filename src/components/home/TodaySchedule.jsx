@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { OccasionalTaskService, TaskService, TaskDelegationService } from '@/api/entities';
+import { OccasionalTaskService, TaskService, TaskDelegationService, TaskExtensionService } from '@/api/entities';
 import { sendPushNotification } from '@/api/supabaseClient';
 import { Clock, CheckCircle2, Circle, Star, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -52,6 +52,12 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
   const { data: delegations = [] } = useQuery({
     queryKey: ['taskDelegations'],
     queryFn: () => TaskDelegationService.list('-created_at'),
+  });
+
+  // Fetch extensions for today (granted by parents)
+  const { data: extensions = [] } = useQuery({
+    queryKey: ['taskExtensions', today],
+    queryFn: () => TaskExtensionService.getByDate(today),
   });
 
   const todayDelegations = delegations.filter(d => d.task_date === today);
@@ -281,7 +287,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
 
         {todaySchedule.map((task, i) => {
           const isDone = isTaskDone(task, todayTasks);
-          const overdue = !isDone && isOverdue(task.end_time);
+          const isExtended = extensions.some(e => e.person === person && e.task_name === task.task_name);
+          const overdue = !isDone && !isExtended && isOverdue(task.end_time);
           const active = isActive(task.start_time, task.end_time);
 
           return (
@@ -299,8 +306,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
                   'cursor-pointer hover:border-primary/20 active:scale-[0.98]'
                 }`}
               >
-                <div className="text-xl flex-shrink-0" onClick={() => !isDone && setSelectedTask(task)}>{TASK_ICONS[task.task_name] || '✅'}</div>
-                <div className="flex-1 min-w-0" onClick={() => !isDone && setSelectedTask(task)}>
+                <div className="text-xl flex-shrink-0" onClick={() => !isDone && setSelectedTask({ ...task, _isExtended: isExtended })}>{TASK_ICONS[task.task_name] || '✅'}</div>
+                <div className="flex-1 min-w-0" onClick={() => !isDone && setSelectedTask({ ...task, _isExtended: isExtended })}>
                   <p className={`text-sm font-semibold ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                     {task.task_name}
                   </p>
@@ -388,6 +395,7 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
       <TaskCompleteModal
         task={selectedTask}
         person={person}
+        isExtended={selectedTask?._isExtended ?? false}
         onClose={() => setSelectedTask(null)}
       />
 

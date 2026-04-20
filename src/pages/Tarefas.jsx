@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ScheduledTaskService, OccasionalTaskService, TaskService, TaskReminderService, TaskDelegationService } from '@/api/entities';
+import { ScheduledTaskService, OccasionalTaskService, TaskService, TaskReminderService, TaskDelegationService, TaskExtensionService } from '@/api/entities';
 import { sendTaskReminder } from '@/api/pushNotifications';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { PEOPLE, PERSON_AVATARS, TASK_ICONS, getLocalDateStr } from '@/lib/taskHelpers';
-import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, Clock, X, ArrowRightLeft } from 'lucide-react';
+import { Lock, ChevronLeft, ChevronRight, Bell, BellRing, Clock, X, ArrowRightLeft, TimerReset } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -65,7 +65,49 @@ export default function Tarefas() {
     queryFn: () => TaskDelegationService.list('-created_at'),
   });
 
+  const { data: extensions = [], isLoading: loadingExtensions } = useQuery({
+    queryKey: ['taskExtensions', dateStr],
+    queryFn: () => TaskExtensionService.getByDate(dateStr),
+  });
+
   const todayDelegations = delegations.filter(d => d.task_date === dateStr);
+
+  const extendTaskMutation = useMutation({
+    mutationFn: ({ person, taskName, withReminder }) =>
+      TaskExtensionService.create({
+        person,
+        task_name: taskName,
+        task_date: dateStr,
+        with_reminder: withReminder,
+        granted_by: session?.user?.id,
+      }),
+    onSuccess: async (_, { person, taskName, withReminder }) => {
+      queryClient.invalidateQueries({ queryKey: ['taskExtensions', dateStr] });
+      if (withReminder) {
+        try {
+          await sendTaskReminder({
+            person,
+            taskName,
+            taskType: selectedTask?._type,
+            taskDate: dateStr,
+            sentBy: session?.user?.id,
+          });
+          queryClient.invalidateQueries({ queryKey: ['taskReminders', dateStr] });
+        } catch (_) {
+          // reminder already sent — that's fine
+        }
+      }
+      toast.success(`Mais tempo dado a ${person} para "${taskName}"!`);
+      setSelectedTask(null);
+    },
+    onError: (err) => {
+      if (err?.code === '23505') {
+        toast.error('Já foi dado mais tempo para esta tarefa hoje.');
+      } else {
+        toast.error('Erro ao estender tarefa');
+      }
+    },
+  });
 
   const sendReminderMutation = useMutation({
     mutationFn: ({ person, taskName, taskType }) =>
@@ -99,12 +141,16 @@ export default function Tarefas() {
           const delegation = todayDelegations.find(
             d => d.task_type === 'scheduled' && d.scheduled_task_id === t.id && d.from_person === person
           );
+          const extension = extensions.find(e => e.person === person && e.task_name === t.task_name);
+          const overdue = isOverdue(t.end_time, dateStr);
           return {
             ...t,
             _type: 'scheduled',
             _done: completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
             _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
-            _overdue: isOverdue(t.end_time, dateStr),
+            _overdue: extension ? false : overdue,
+            _extended: !!extension,
+            _extension: extension || null,
             _delegation: delegation || null,
           };
         });
@@ -115,24 +161,22 @@ export default function Tarefas() {
           const delegation = todayDelegations.find(
             d => d.task_type === 'occasional' && d.occasional_task_id === t.id && d.from_person === person
           );
+          const extension = extensions.find(e => e.person === person && e.task_name === t.task_name);
+          const overdue = isOverdue(t.end_time, dateStr);
           return {
             ...t,
             _type: 'occasional',
             _done: t.completed || completedTasks.some(ct => ct.person === person && ct.task_name === t.task_name && ct.date === dateStr),
             _reminded: reminders.some(r => r.person === person && r.task_name === t.task_name),
-            _overdue: isOverdue(t.end_time, dateStr),
-            _delegation: delegation || null,
-          };
-        });
-
-      result[person] = [...scheduled, ...occasional].sort((a, b) =>
-        (a.end_time || '23:59').localeCompare(b.end_time || '23:59')
+            _overdue: extension ? false : overdue,
+            _extended: !!extension,
+            _extension: extension || null,
       );
     }
     return result;
-  }, [scheduledTasks, occasionalTasks, completedTasks, reminders, todayDelegations, dayKey, dateStr]);
+  }, [scheduledTasks, occasionalTasks, completedTasks, reminders, extensions, todayDelegations, dayKey, dateStr]);
 
-  if (loadingUser || loadingSched || loadingOcc || loadingTasks || loadingReminders || loadingDelegations) {
+  if (loadingUser || loadingSched || loadingOcc || loadingTasks || loadingReminders || loadingDelegations || loadingExtensions) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -267,6 +311,10 @@ export default function Tarefas() {
                       <Badge className="bg-green-500/10 text-green-600 text-[10px] flex-shrink-0">
                         Feita
                       </Badge>
+                    ) : task._extended ? (
+                      <Badge className="bg-amber-500/10 text-amber-600 text-[10px] flex-shrink-0">
+                        Extendida
+                      </Badge>
                     ) : task._overdue ? (
                       <Badge variant="destructive" className="text-[10px] flex-shrink-0">
                         Atrasada
@@ -330,7 +378,13 @@ export default function Tarefas() {
                     <span>Recompensa: €{Number(selectedTask.reward).toFixed(2)}</span>
                   </div>
                 )}
-                {selectedTask._overdue && (
+                {selectedTask._extended && (
+                  <div className="bg-amber-500/10 rounded-xl p-3 text-sm text-amber-600 text-center font-medium">
+                    ✅ Já foi dado mais tempo para esta tarefa
+                    {selectedTask._extension?.with_reminder && ' (com lembrete)'}
+                  </div>
+                )}
+                {!selectedTask._extended && selectedTask._overdue && (
                   <div className="bg-destructive/10 rounded-xl p-3 text-sm text-destructive text-center font-medium">
                     ⚠️ Esta tarefa já passou do prazo
                   </div>
@@ -342,39 +396,80 @@ export default function Tarefas() {
                 )}
               </div>
 
-              <button
-                disabled={selectedTask._reminded || selectedTask._done || sendReminderMutation.isPending}
-                onClick={() =>
-                  sendReminderMutation.mutate({
-                    person: selectedTask.person,
-                    taskName: selectedTask.task_name,
-                    taskType: selectedTask._type,
-                  })
-                }
-                className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                {sendReminderMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    A enviar...
-                  </>
-                ) : selectedTask._reminded ? (
-                  <>
-                    <BellRing className="w-4 h-4" />
-                    Lembrete já enviado
-                  </>
-                ) : (
-                  <>
+              {/* Overdue: show extension options */}
+              {selectedTask._overdue && !selectedTask._extended && (
+                <div className="space-y-2 mb-3">
+                  <p className="text-xs text-muted-foreground text-center font-medium mb-2">
+                    Dar mais tempo a {selectedTask.person} para concluir:
+                  </p>
+                  <button
+                    disabled={extendTaskMutation.isPending}
+                    onClick={() =>
+                      extendTaskMutation.mutate({
+                        person: selectedTask.person,
+                        taskName: selectedTask.task_name,
+                        withReminder: false,
+                      })
+                    }
+                    className="w-full py-3 rounded-2xl bg-amber-500 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    <TimerReset className="w-4 h-4" />
+                    Dar mais tempo (sem lembrete) — €1,00
+                  </button>
+                  <button
+                    disabled={extendTaskMutation.isPending || selectedTask._reminded}
+                    onClick={() =>
+                      extendTaskMutation.mutate({
+                        person: selectedTask.person,
+                        taskName: selectedTask.task_name,
+                        withReminder: true,
+                      })
+                    }
+                    className="w-full py-3 rounded-2xl bg-amber-500/70 text-white font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
                     <Bell className="w-4 h-4" />
-                    Enviar Lembrete
-                  </>
-                )}
-              </button>
+                    Dar mais tempo (com lembrete) — €0,50
+                  </button>
+                </div>
+              )}
 
-              {!selectedTask._reminded && !selectedTask._done && (
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  O valor da tarefa será reduzido para {selectedTask.person} ao concluir com lembrete
-                </p>
+              {/* Non-overdue or already extended: show reminder button */}
+              {(!selectedTask._overdue || selectedTask._extended) && (
+                <>
+                  <button
+                    disabled={selectedTask._reminded || selectedTask._done || sendReminderMutation.isPending}
+                    onClick={() =>
+                      sendReminderMutation.mutate({
+                        person: selectedTask.person,
+                        taskName: selectedTask.task_name,
+                        taskType: selectedTask._type,
+                      })
+                    }
+                    className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {sendReminderMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        A enviar...
+                      </>
+                    ) : selectedTask._reminded ? (
+                      <>
+                        <BellRing className="w-4 h-4" />
+                        Lembrete já enviado
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="w-4 h-4" />
+                        Enviar Lembrete
+                      </>
+                    )}
+                  </button>
+                  {!selectedTask._reminded && !selectedTask._done && (
+                    <p className="text-xs text-muted-foreground text-center mt-3">
+                      O valor da tarefa será reduzido para {selectedTask.person} ao concluir com lembrete
+                    </p>
+                  )}
+                </>
               )}
             </motion.div>
           </>

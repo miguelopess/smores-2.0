@@ -15,10 +15,11 @@ function isWithinTimeWindow(startTime, endTime) {
   return now <= end;
 }
 
-export default function TaskCompleteModal({ task, person, onClose }) {
+export default function TaskCompleteModal({ task, person, isExtended = false, onClose }) {
   const queryClient = useQueryClient();
   const today = getLocalDateStr();
-  const inTime = isWithinTimeWindow(task?.start_time, task?.end_time);
+  // If parent extended this task, treat it as still within time window
+  const inTime = isExtended || isWithinTimeWindow(task?.start_time, task?.end_time);
   const [selectedType, setSelectedType] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -133,9 +134,15 @@ export default function TaskCompleteModal({ task, person, onClose }) {
               </button>
             </div>
 
-            {!inTime && task.end_time && (
+            {!inTime && !isExtended && task.end_time && (
               <div className="bg-destructive/10 rounded-xl p-3 mb-4 text-sm text-destructive text-center font-medium">
                 ⚠️ Fora do horário — será registado como atrasado
+              </div>
+            )}
+
+            {isExtended && (
+              <div className="bg-amber-500/10 rounded-xl p-3 mb-4 text-sm text-amber-600 text-center font-medium">
+                ⏰ Os teus pais deram-te mais tempo para esta tarefa!
               </div>
             )}
 

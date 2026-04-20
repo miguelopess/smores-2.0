@@ -151,6 +151,27 @@ export const TaskDelegationService = {
   },
 };
 
+export const TaskExtensionService = {
+  async getByDate(date) {
+    const { data, error } = await supabase
+      .from('task_extensions')
+      .select('*')
+      .eq('task_date', date);
+    if (error) throw error;
+    return data;
+  },
+
+  async create(record) {
+    const { data, error } = await supabase
+      .from('task_extensions')
+      .insert(record)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+};
+
 export const CleanupLogService = {
   async getLastCleanupDate() {
     const { data, error } = await supabase
