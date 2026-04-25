@@ -243,7 +243,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
 
         {/* Delegated occasional tasks TO me */}
         {delegatedOccasionalToMe.map((d, i) => {
-          const overdue = isOverdue(d.end_time);
+          const isExtended = extensions.some(e => e.task_name === d.task_name && (e.person === d.from_person || e.person === person));
+          const overdue = !isExtended && isOverdue(d.end_time);
           const isDone = todayTasks.some(t => t.task_name === d.task_name && t.person === person);
           if (isDone) return null;
           return (
@@ -274,7 +275,9 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
                   )}
                 </div>
                 <div className="flex-shrink-0">
-                  {overdue ? (
+                  {isExtended ? (
+                    <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px]">Extendida</Badge>
+                  ) : overdue ? (
                     <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>
                   ) : (
                     <Badge className="bg-blue-500/15 text-blue-600 border-0 text-[10px]">Delegada</Badge>
@@ -346,7 +349,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
         {/* Delegated scheduled tasks TO me */}
         {delegatedScheduledToMe.map((d, i) => {
           const isDone = todayTasks.some(t => t.task_name === d.task_name && t.person === person);
-          const overdue = !isDone && isOverdue(d.end_time);
+          const isExtended = extensions.some(e => e.task_name === d.task_name && (e.person === d.from_person || e.person === person));
+          const overdue = !isDone && !isExtended && isOverdue(d.end_time);
           const active = isActive(null, d.end_time);
 
           return (
@@ -380,6 +384,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
                 <div className="flex-shrink-0">
                   {isDone ? (
                     <CheckCircle2 className="w-5 h-5 text-primary" />
+                  ) : isExtended ? (
+                    <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px]">Extendida</Badge>
                   ) : overdue ? (
                     <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>
                   ) : (

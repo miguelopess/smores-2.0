@@ -8,7 +8,7 @@ export default function PersonCard({ person, tasks, weekTasks, index }) {
   const personTasks = tasks.filter(t => t.person === person);
   const personWeekTasks = weekTasks.filter(t => t.person === person);
   const currentMonth = getCurrentMonthKey();
-  const personMonthTasks = personTasks.filter(t => t.week_key && t.week_key.startsWith(currentMonth));
+  const personMonthTasks = personTasks.filter(t => t.date && t.date.startsWith(currentMonth));
   const monthEarnings = calculateEarnings(personMonthTasks);
   const weekEarnings = calculateEarnings(personWeekTasks);
   const failures = countFailures(tasks, person);

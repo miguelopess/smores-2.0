@@ -66,7 +66,7 @@ export default function Home() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
-      <p className="text-base font-bold text-foreground mb-6">Semana {currentWeek.split('-')[2]} de {new Date().toLocaleString('pt-PT', { month: 'long' })} <span className="font-normal text-sm text-muted-foreground">· Sistema Familiar</span></p>
+      <p className="text-base font-bold text-foreground mb-6">Semana {currentWeek.split('-W')[1]} de {new Date().toLocaleString('pt-PT', { month: 'long' })} <span className="font-normal text-sm text-muted-foreground">· Sistema Familiar</span></p>
 
       {/* Today's Schedule for logged-in child */}
       {!userIsParent && person && (

@@ -61,19 +61,25 @@ export function getLocalDateStr(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-// Week of month: 1-4 (or 5 in rare cases)
-export function getWeekOfMonth(date) {
+// ISO week number (1-53), weeks start on Monday
+export function getWeekOfYear(date) {
   const d = new Date(date);
-  return Math.ceil(d.getDate() / 7);
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 3);
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  firstThursday.setDate(firstThursday.getDate() - ((firstThursday.getDay() + 6) % 7) + 3);
+  return Math.round((thursday - firstThursday) / (7 * 24 * 60 * 60 * 1000)) + 1;
 }
 
-// Returns a unique key for a given week: "YYYY-MM-W" e.g. "2026-03-1"
+// Returns a unique key for a given week: "YYYY-WNN" e.g. "2026-W17"
+// Uses ISO 8601 weeks (Monday–Sunday). Year is the ISO year (may differ from calendar year in early Jan/late Dec).
 export function getWeekKey(date) {
   const d = new Date(date);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const week = getWeekOfMonth(d);
-  return `${year}-${String(month).padStart(2, '0')}-${week}`;
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 3);
+  const isoYear = thursday.getFullYear();
+  const weekNum = getWeekOfYear(d);
+  return `${isoYear}-W${String(weekNum).padStart(2, '0')}`;
 }
 
 export function getCurrentWeekKey() {
@@ -87,11 +93,11 @@ export function getCurrentMonthKey() {
 
 // Keep for backward compat
 export function getWeekNumber(date) {
-  return getWeekOfMonth(date);
+  return getWeekOfYear(date);
 }
 
 export function getCurrentWeekNumber() {
-  return getWeekOfMonth(new Date());
+  return getWeekOfYear(new Date());
 }
 
 export function calculateEarnings(tasks) {
@@ -107,7 +113,7 @@ export function getWeekTasks(tasks, weekKey) {
 }
 
 export function getMonthTasks(tasks, monthKey) {
-  return tasks.filter(t => t.week_key && t.week_key.startsWith(monthKey));
+  return tasks.filter(t => t.date && t.date.startsWith(monthKey));
 }
 
 export function checkWeeklyBonus(tasks, person, weekKey) {
