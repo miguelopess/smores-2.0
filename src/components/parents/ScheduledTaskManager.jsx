@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Clock } from 'lucide-react';
+import { Trash2, Plus, Clock, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PEOPLE, PERSON_AVATARS, COMMON_TASKS, TASK_ICONS } from '@/lib/taskHelpers';
 
@@ -61,6 +61,52 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
       toast.success('Tarefa removida');
     },
   });
+
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ task_name: '', days_of_week: [], end_time: '' });
+
+  const startEdit = (task) => {
+    setEditingId(task.id);
+    setEditForm({ task_name: task.task_name, days_of_week: task.days_of_week || [], end_time: task.end_time || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ task_name: '', days_of_week: [], end_time: '' });
+  };
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }) => ScheduledTaskService.update(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduledTasks'] });
+      cancelEdit();
+      toast.success('Tarefa atualizada!');
+    },
+  });
+
+  const handleSaveEdit = () => {
+    if (!editForm.task_name || editForm.days_of_week.length === 0) {
+      toast.error('Preenche a tarefa e seleciona pelo menos um dia!');
+      return;
+    }
+    updateMutation.mutate({
+      id: editingId,
+      updates: {
+        task_name: editForm.task_name,
+        days_of_week: editForm.days_of_week,
+        end_time: editForm.end_time || null,
+      },
+    });
+  };
+
+  const toggleEditDay = (day) => {
+    setEditForm(f => ({
+      ...f,
+      days_of_week: f.days_of_week.includes(day)
+        ? f.days_of_week.filter(d => d !== day)
+        : [...f.days_of_week, day],
+    }));
+  };
 
   const toggleDay = (day) => {
     setForm(f => ({
@@ -239,32 +285,94 @@ export default function ScheduledTaskManager({ scheduledTasks }) {
           <p className="text-xs text-muted-foreground text-center py-4">Sem tarefas diárias definidas</p>
         ) : (
           personSchedule.map(task => (
-            <Card key={task.id} className="p-3 flex items-center gap-3">
-              <span className="text-xl">{TASK_ICONS[task.task_name] || '✅'}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{task.task_name}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {task.days_of_week?.map(d => (
-                    <span key={d} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">
-                      {DAYS_FULL[d]}
-                    </span>
-                  ))}
+            <Card key={task.id} className="p-3">
+              {editingId === task.id ? (
+                <div className="space-y-3">
+                  <Input
+                    value={editForm.task_name}
+                    onChange={e => setEditForm(f => ({ ...f, task_name: e.target.value }))}
+                    className="h-9 rounded-xl text-sm font-semibold"
+                  />
+                  <div className="flex gap-1">
+                    {DAYS.map(d => (
+                      <button
+                        key={d.key}
+                        onClick={() => toggleEditDay(d.key)}
+                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                          editForm.days_of_week.includes(d.key)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                    <Input
+                      type="time"
+                      value={editForm.end_time}
+                      onChange={e => setEditForm(f => ({ ...f, end_time: e.target.value }))}
+                      className="h-8 rounded-xl text-xs flex-1"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-8 rounded-xl text-xs"
+                      onClick={handleSaveEdit}
+                      disabled={updateMutation.isPending}
+                    >
+                      <Check className="w-3 h-3 mr-1" /> Guardar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="flex-1 h-8 rounded-xl text-xs"
+                      onClick={cancelEdit}
+                    >
+                      <X className="w-3 h-3 mr-1" /> Cancelar
+                    </Button>
+                  </div>
                 </div>
-                {task.end_time && (
-                  <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {`Até às ${task.end_time}`}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => deleteMutation.mutate(task.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{TASK_ICONS[task.task_name] || '✅'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{task.task_name}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {task.days_of_week?.map(d => (
+                        <span key={d} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">
+                          {DAYS_FULL[d]}
+                        </span>
+                      ))}
+                    </div>
+                    {task.end_time && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {`Até às ${task.end_time}`}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => startEdit(task)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(task.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </Card>
           ))
         )}

@@ -44,6 +44,12 @@ export const ScheduledTaskService = {
     return data;
   },
 
+  async update(id, updates) {
+    const { data, error } = await supabase.from('scheduled_tasks').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+
   async delete(id) {
     const { error } = await supabase.from('scheduled_tasks').delete().eq('id', id);
     if (error) throw error;
