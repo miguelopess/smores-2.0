@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { CheckCircle2, Camera, Loader2, Lock } from 'lucide-react';
-import { COMPLETION_TYPES, COMMON_TASKS, PERSON_AVATARS, TASK_ICONS, getWeekKey, getCurrentMonthKey, getLocalDateStr } from '@/lib/taskHelpers';
+import { COMPLETION_TYPES, COMMON_TASKS, PERSON_AVATARS, TASK_ICONS, SIDNEY_TASKS, getTaskValue, getWeekKey, getCurrentMonthKey, getLocalDateStr } from '@/lib/taskHelpers';
 import { useCurrentUser, isParent } from '@/lib/useCurrentUser';
 import TaskGrid from '@/components/register/TaskGrid';
 
@@ -66,12 +66,11 @@ export default function RegisterTask() {
       if (!finalTaskName || !completionType) toast.error('Preenche todos os campos!');
       return;
     }
-    const ct = COMPLETION_TYPES[completionType];
     createMutation.mutate({
       person,
       task_name: finalTaskName,
       completion_type: completionType,
-      value: ct.value,
+      value: getTaskValue(finalTaskName, completionType),
       date: today,
       week_key: getWeekKey(new Date()),
     });
@@ -165,23 +164,27 @@ export default function RegisterTask() {
                 Como foi feita?
               </Label>
               <div className="space-y-2">
-                {Object.entries(COMPLETION_TYPES).filter(([key]) => key !== 'not_done').map(([key, ct]) => (
-                  <button
-                    key={key}
-                    onClick={() => setCompletionType(key)}
-                    className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
-                      completionType === key
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border bg-card hover:border-primary/20'
-                    }`}
-                  >
-                    <span className="text-xl">{ct.emoji}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{ct.label}</p>
-                    </div>
-                    <span className={`text-sm font-bold ${ct.color}`}>+€{ct.value.toFixed(2)}</span>
-                  </button>
-                ))}
+                {Object.entries(COMPLETION_TYPES).filter(([key]) => key !== 'not_done').map(([key, ct]) => {
+                  const finalName = taskName === 'custom' ? customTask : taskName;
+                  const displayValue = getTaskValue(finalName, key);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setCompletionType(key)}
+                      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
+                        completionType === key
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-card hover:border-primary/20'
+                      }`}
+                    >
+                      <span className="text-xl">{ct.emoji}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{ct.label}</p>
+                      </div>
+                      <span className={`text-sm font-bold ${ct.color}`}>+€{displayValue.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

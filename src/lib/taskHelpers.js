@@ -1,4 +1,4 @@
-export const PEOPLE = ['Inês', 'Pedro', 'Miguel'];
+﻿export const PEOPLE = ['Inês', 'Pedro', 'Miguel'];
 
 export const COMPLETION_TYPES = {
   on_time_no_reminder: { label: 'A tempo + Sem lembrete', value: 1.00, emoji: '🌟', color: 'text-primary' },
@@ -30,7 +30,7 @@ export const TASK_ICONS = {
   'Estender roupa': '👕',
   'Despejar lixo': '🗑️',
   'Meias (10x)': '🧦',
-  'Higiene Sidney': '�',
+  'Higiene Sidney': '🛁',
   'Passear Sidney': '🦮',
   'Escovar Sidney': '🪮',
   'Limpeza mensal': '🧹',
@@ -98,6 +98,13 @@ export function getWeekNumber(date) {
 
 export function getCurrentWeekNumber() {
   return getWeekOfYear(new Date());
+}
+
+export const SIDNEY_TASKS = ['Higiene Sidney', 'Passear Sidney', 'Escovar Sidney'];
+
+export function getTaskValue(taskName, completionType) {
+  if (SIDNEY_TASKS.includes(taskName)) return 0;
+  return COMPLETION_TYPES[completionType]?.value ?? 0;
 }
 
 export function calculateEarnings(tasks) {

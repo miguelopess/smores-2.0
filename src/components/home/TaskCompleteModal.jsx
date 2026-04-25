@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { TaskService, TaskReminderService } from '@/api/entities';
 import { uploadTaskPhoto } from '@/api/storage';
-import { COMPLETION_TYPES, getWeekKey, getCurrentMonthKey, TASK_ICONS, PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
+import { COMPLETION_TYPES, SIDNEY_TASKS, getWeekKey, getCurrentMonthKey, TASK_ICONS, PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,7 +45,10 @@ export default function TaskCompleteModal({ task, person, isExtended = false, on
   const occasionalReward = isOccasional && task?.reward != null ? Number(task.reward) : null;
 
   // Build completion type overrides for occasional tasks with reminders
+  const isSidney = SIDNEY_TASKS.includes(task?.task_name);
+
   const getDisplayValue = (key) => {
+    if (isSidney) return 0;
     if (occasionalReward != null) {
       if (key === 'on_time_no_reminder') return occasionalReward;
       if (key === 'on_time_with_reminder') return Math.round(occasionalReward * 50) / 100;
