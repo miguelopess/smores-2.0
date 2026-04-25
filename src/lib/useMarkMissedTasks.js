@@ -1,21 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { TaskService, TaskDelegationService, CleanupLogService } from '@/api/entities';
 import { sendPushNotification } from '@/api/supabaseClient';
 import { getWeekKey, getCurrentMonthKey } from './taskHelpers';
 
+// Module-level Set — persists across component remounts within the same app session
+const _checkedPersons = new Set();
+
 // Checks the last 7 days for scheduled tasks that were never done and registers them as 'not_done'
 export function useMarkMissedTasks({ scheduledTasks, tasks, person, enabled }) {
-  const hasRun = useRef(false);
-
-  useEffect(() => {
-    // Reset when person changes
-    hasRun.current = false;
-  }, [person]);
-
   useEffect(() => {
     if (!enabled || !person || scheduledTasks.length === 0) return;
-    if (hasRun.current) return; // Only run once per session
-    hasRun.current = true;
+    if (_checkedPersons.has(person)) return;
+    _checkedPersons.add(person);
 
     const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
