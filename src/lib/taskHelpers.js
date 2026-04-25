@@ -129,7 +129,7 @@ export function countFailures(tasks, person) {
   
   return tasks.filter(t =>
     t.person === person &&
-    (t.completion_type === 'late' || t.completion_type === 'not_done') &&
+    t.completion_type === 'not_done' &&
     new Date(t.date + 'T12:00:00') >= thirtyDaysAgo
   ).length;
 }
