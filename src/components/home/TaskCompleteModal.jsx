@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { TaskService, TaskReminderService } from '@/api/entities';
+import { TaskService, TaskReminderService, OccasionalTaskService } from '@/api/entities';
 import { uploadTaskPhoto } from '@/api/storage';
 import { COMPLETION_TYPES, SIDNEY_TASKS, getWeekKey, getCurrentMonthKey, TASK_ICONS, PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +15,7 @@ function isWithinTimeWindow(startTime, endTime) {
   return now <= end;
 }
 
-export default function TaskCompleteModal({ task, person, isExtended = false, onClose }) {
+export default function TaskCompleteModal({ task, person, isExtended = false, occasionalTaskId, onClose }) {
   const queryClient = useQueryClient();
   const today = getLocalDateStr();
   // If parent extended this task, treat it as still within time window
@@ -67,19 +67,29 @@ export default function TaskCompleteModal({ task, person, isExtended = false, on
       if (photo) {
         photo_url = await uploadTaskPhoto(photo);
       }
-      return TaskService.create({
-        person,
-        task_name: task.task_name,
-        completion_type: completionType,
-        value: getActualValue(completionType),
-        date: today,
-        week_key: getWeekKey(new Date()),
-        month_key: getCurrentMonthKey(),
-        photo_url,
-      });
+      const promises = [
+        TaskService.create({
+          person,
+          task_name: task.task_name,
+          completion_type: completionType,
+          value: getActualValue(completionType),
+          date: today,
+          week_key: getWeekKey(new Date()),
+          month_key: getCurrentMonthKey(),
+          photo_url,
+        }),
+      ];
+      if (occasionalTaskId) {
+        promises.push(OccasionalTaskService.update(occasionalTaskId, { completed: true }));
+      }
+      return Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      if (occasionalTaskId) {
+        queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
+        queryClient.invalidateQueries({ queryKey: ['taskDelegations'] });
+      }
       toast.success('Tarefa concluída! 🎉');
       handleClose();
     },
@@ -129,6 +139,9 @@ export default function TaskCompleteModal({ task, person, isExtended = false, on
                   <h3 className="font-bold text-lg text-foreground">{task.task_name}</h3>
                   {task.end_time && (
                     <p className="text-xs text-muted-foreground">Até às {task.end_time}</p>
+                  )}
+                  {task.notes && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{task.notes}</p>
                   )}
                 </div>
               </div>

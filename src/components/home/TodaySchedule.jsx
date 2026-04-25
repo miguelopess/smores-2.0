@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { OccasionalTaskService, TaskService, TaskDelegationService, TaskExtensionService } from '@/api/entities';
+import { TaskDelegationService, TaskExtensionService } from '@/api/entities';
 import { sendPushNotification } from '@/api/supabaseClient';
 import { Clock, CheckCircle2, Circle, Star, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { TASK_ICONS, PEOPLE, PERSON_AVATARS, getLocalDateStr, getWeekKey, getCurrentMonthKey } from '@/lib/taskHelpers';
+import { TASK_ICONS, PEOPLE, PERSON_AVATARS, getLocalDateStr } from '@/lib/taskHelpers';
 import TaskCompleteModal from './TaskCompleteModal';
 import { toast } from 'sonner';
 
@@ -42,7 +42,6 @@ function isActive(startTime, endTime) {
 
 export default function TodaySchedule({ scheduledTasks, todayTasks, person, occasionalTasks = [] }) {
   const [selectedTask, setSelectedTask] = useState(null);
-  const [selectedOccasional, setSelectedOccasional] = useState(null);
   const [delegateConfirm, setDelegateConfirm] = useState(null);
   const queryClient = useQueryClient();
   const todayKey = getTodayKey();
@@ -136,34 +135,6 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
     },
   });
 
-  const markOccasionalDone = useMutation({
-    mutationFn: async (task) => {
-      // For delegated occasional tasks, mark completed on the original occasional_task if it exists
-      if (!task._delegated && task.id) {
-        await OccasionalTaskService.update(task.id, { completed: true });
-      } else if (task._delegated && task.occasional_task_id) {
-        await OccasionalTaskService.update(task.occasional_task_id, { completed: true });
-      }
-      const taskPerson = task.person || person;
-      if (task.reward && task.reward > 0) {
-        await TaskService.create({
-          person: taskPerson,
-          task_name: task.task_name,
-          completion_type: 'on_time_no_reminder',
-          value: task.reward,
-          date: today,
-          week_key: getWeekKey(new Date()),
-          month_key: getCurrentMonthKey(),
-          photo_url: '',
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['occasionalTasks'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['taskDelegations'] });
-    },
-  });
 
   const totalAll = todaySchedule.length + todayOccasional.length + delegatedScheduledToMe.length + delegatedOccasionalToMe.length;
   const doneScheduled = todaySchedule.filter(t => isTaskDone(t, todayTasks)).length;
@@ -208,8 +179,8 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
                   overdue ? 'border-destructive/40 bg-destructive/5' : ''
                 }`}
               >
-                <div className="text-xl flex-shrink-0 cursor-pointer" onClick={() => setSelectedOccasional(task)}>{TASK_ICONS[task.task_name] || '✅'}</div>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedOccasional(task)}>
+                <div className="text-xl flex-shrink-0 cursor-pointer" onClick={() => setSelectedTask({ ...task, _occasional: true })}>{TASK_ICONS[task.task_name] || '✅'}</div>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedTask({ ...task, _occasional: true })}>
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold text-foreground">{task.task_name}</p>
                     <Star className="w-3 h-3 text-accent fill-accent" />
@@ -255,7 +226,7 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
               transition={{ delay: i * 0.05 }}
             >
               <Card
-                onClick={() => setSelectedOccasional({ ...d, person, _delegated: true, _from: d.from_person })}
+                onClick={() => setSelectedTask({ ...d, person, _delegated: true, _from: d.from_person, _occasional: true })}
                 className={`p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all border-blue-500/30 bg-blue-500/5 ${
                   overdue ? 'border-destructive/40 bg-destructive/5' : ''
                 }`}
@@ -402,46 +373,13 @@ export default function TodaySchedule({ scheduledTasks, todayTasks, person, occa
         task={selectedTask}
         person={person}
         isExtended={selectedTask?._isExtended ?? false}
+        occasionalTaskId={
+          selectedTask?._occasional
+            ? (selectedTask?._delegated ? selectedTask?.occasional_task_id : selectedTask?.id)
+            : undefined
+        }
         onClose={() => setSelectedTask(null)}
       />
-
-      {selectedOccasional && (
-        <div className="fixed inset-0 bg-black/40 z-40 flex items-end" onClick={() => setSelectedOccasional(null)}>
-          <div className="w-full bg-card rounded-t-3xl p-6 pb-24 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-5">
-              <span className="text-3xl">{TASK_ICONS[selectedOccasional.task_name] || '✅'}</span>
-              <div>
-                <h3 className="font-bold text-lg text-foreground">{selectedOccasional.task_name}</h3>
-                {selectedOccasional.end_time && (
-                  <p className="text-xs text-muted-foreground">Até às {selectedOccasional.end_time}</p>
-                )}
-                {selectedOccasional.notes && (
-                  <p className="text-xs text-muted-foreground">{selectedOccasional.notes}</p>
-                )}
-                {selectedOccasional.reward > 0 && (
-                  <p className="text-sm font-bold text-primary mt-1">🎁 Recompensa: +€{Number(selectedOccasional.reward).toFixed(2)}</p>
-                )}
-                {selectedOccasional._delegated && (
-                  <p className="text-xs text-blue-600 mt-1">📥 Delegada por {PERSON_AVATARS[selectedOccasional._from]} {selectedOccasional._from}</p>
-                )}
-              </div>
-            </div>
-            <button
-              disabled={markOccasionalDone.isPending}
-              onClick={() => { markOccasionalDone.mutate({ ...selectedOccasional, person }); setSelectedOccasional(null); }}
-              className="w-full py-3 rounded-2xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50"
-            >
-              ✅ Marcar como concluída
-            </button>
-            <button
-              onClick={() => setSelectedOccasional(null)}
-              className="w-full py-3 mt-2 rounded-2xl bg-muted text-muted-foreground font-medium text-sm"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Delegation confirmation dialog */}
       {delegateConfirm && (
