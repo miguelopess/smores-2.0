@@ -119,7 +119,7 @@ export function getMonthTasks(tasks, monthKey) {
 export function checkWeeklyBonus(tasks, person, weekKey) {
   const personWeekTasks = tasks.filter(t => t.person === person && t.week_key === weekKey);
   if (personWeekTasks.length === 0) return false;
-  return personWeekTasks.every(t => t.completion_type === 'on_time_no_reminder');
+  return personWeekTasks.every(t => t.completion_type !== 'not_done');
 }
 
 export function countFailures(tasks, person) {
