@@ -134,9 +134,21 @@ export default function Tarefas() {
 
   const tasksByPerson = useMemo(() => {
     const result = {};
+
+    const acceptedScheduledIds = new Set(
+      todayDelegations
+        .filter(d => d.status === 'accepted' && d.task_type === 'scheduled')
+        .map(d => d.scheduled_task_id)
+    );
+    const acceptedOccasionalIds = new Set(
+      todayDelegations
+        .filter(d => d.status === 'accepted' && d.task_type === 'occasional')
+        .map(d => d.occasional_task_id)
+    );
+
     for (const person of PEOPLE) {
       const scheduled = scheduledTasks
-        .filter(t => t.person === person && t.days_of_week?.includes(dayKey))
+        .filter(t => t.person === person && t.days_of_week?.includes(dayKey) && !acceptedScheduledIds.has(t.id))
         .map(t => {
           const delegation = todayDelegations.find(
             d => d.task_type === 'scheduled' && d.scheduled_task_id === t.id && d.from_person === person
@@ -156,7 +168,7 @@ export default function Tarefas() {
         });
 
       const occasional = occasionalTasks
-        .filter(t => t.person === person && t.date === dateStr)
+        .filter(t => t.person === person && t.date === dateStr && !acceptedOccasionalIds.has(t.id))
         .map(t => {
           const delegation = todayDelegations.find(
             d => d.task_type === 'occasional' && d.occasional_task_id === t.id && d.from_person === person
@@ -175,7 +187,33 @@ export default function Tarefas() {
           };
         });
 
-      result[person] = [...scheduled, ...occasional].sort((a, b) =>
+      const delegatedIn = todayDelegations
+        .filter(d => d.to_person === person && d.status === 'accepted')
+        .map(d => {
+          const originalTask = d.task_type === 'scheduled'
+            ? scheduledTasks.find(t => t.id === d.scheduled_task_id)
+            : occasionalTasks.find(t => t.id === d.occasional_task_id);
+          if (!originalTask) return null;
+
+          const extension = extensions.find(e => e.person === person && e.task_name === d.task_name);
+          const overdue = isOverdue(originalTask.end_time, dateStr);
+
+          return {
+            ...originalTask,
+            person,
+            task_name: d.task_name,
+            _type: d.task_type,
+            _done: completedTasks.some(ct => ct.person === person && ct.task_name === d.task_name && ct.date === dateStr),
+            _reminded: reminders.some(r => r.person === person && r.task_name === d.task_name),
+            _overdue: extension ? false : overdue,
+            _extended: !!extension,
+            _extension: extension || null,
+            _delegation: { ...d, _isReceived: true },
+          };
+        })
+        .filter(Boolean);
+
+      result[person] = [...scheduled, ...occasional, ...delegatedIn].sort((a, b) =>
         (a.end_time || '23:59').localeCompare(b.end_time || '23:59')
       );
     }
@@ -298,9 +336,11 @@ export default function Tarefas() {
                     {task._delegation && (
                       <Badge className="bg-blue-500/10 text-blue-600 text-[10px] flex items-center gap-1 flex-shrink-0 border-0">
                         <ArrowRightLeft className="w-3 h-3" />
-                        {task._delegation.status === 'accepted'
-                          ? `→ ${task._delegation.to_person}`
-                          : 'Pendente'}
+                        {task._delegation._isReceived
+                          ? `← ${task._delegation.from_person}`
+                          : task._delegation.status === 'accepted'
+                            ? `→ ${task._delegation.to_person}`
+                            : 'Pendente'}
                       </Badge>
                     )}
 
